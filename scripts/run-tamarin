@@ -1,0 +1,3 @@
+#!/bin/sh
+
+sudo -u tamarin sh -c 'cd; ./tamarin --prove pqconnect_handshake.spthy'

@@ -1,0 +1,64 @@
+#!/bin/sh
+
+if [ -e /service ]
+then
+  : # presumably everything ok already
+else
+
+  if lsb_release &>/dev/null;
+  then
+    dist=$(lsb_release -a | grep Distributor | awk {'print $3'})
+  else
+    dist="Debian"
+  fi
+
+  case $dist in
+    Ubuntu | Debian)
+      [ -e /etc/service ] || apt install daemontools-run -y
+      ln -s /etc/service /service
+      ;;
+
+    *)
+      # assuming compiler tools installed from download-build-install-deps
+      # assuming systemd-based system for starting daemontools
+
+      mkdir -p /package
+      chmod 1755 /package
+      cd /package
+      wget https://cr.yp.to/daemontools/daemontools-0.76.tar.gz
+      gunzip daemontools-0.76.tar
+      tar -xpf daemontools-0.76.tar
+      cd admin/daemontools-0.76
+      echo gcc -O \
+        --include=errno.h \
+        --include=unistd.h \
+        --include=grp.h \
+        --include=signal.h \
+        --include=stdio.h \
+        -Wno-incompatible-pointer-types \
+        -Wno-implicit-int \
+        > src/conf-cc
+      package/compile
+      package/upgrade
+      mkdir -p /service
+
+      (
+        echo '[Unit]'
+        echo 'Description=DJB daemontools'
+        echo 'After=sysinit.target'
+        echo ''
+        echo '[Service]'
+        echo 'ExecStart=/command/svscanboot'
+        echo 'Restart=always'
+        echo ''
+        echo '[Install]'
+        echo 'WantedBy=multi-user.target'
+      ) > /lib/systemd/system/daemontools.service
+
+      chmod 644 /lib/systemd/system/daemontools.service
+
+      ln -s /lib/systemd/system/daemontools.service /etc/systemd/system/multi-user.target.wants/
+      systemctl start daemontools
+
+  esac
+fi

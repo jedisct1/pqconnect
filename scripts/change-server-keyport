@@ -1,0 +1,12 @@
+#!/bin/sh
+
+umask 077
+
+port=${1-42425}
+
+echo "$port" > /etc/pqconnect/config/keyport
+
+. run/bin/activate
+export LD_LIBRARY_PATH=/usr/local/lib
+
+pqconnect-keygen -c /etc/pqconnect/config -d /etc/pqconnect/keys -D

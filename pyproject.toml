@@ -1,0 +1,91 @@
+[project]
+name = "pqconnect"
+version = "1.2.1"
+description = "PQConnect Post-Quantum Boring Private Network"
+readme = "README.md"
+requires-python = ">=3.7"
+license = {file = "LICENSE"}
+keywords = ["post-quantum", "cryptography", "VPN", "BPN", "tunnel"]
+authors = [
+        {name = "Jonathan Levin", email = "pqconnect@riseup.net" }
+]
+classifiers = [
+        "Development Status :: 4 - Beta",
+        "Topic :: Security :: Cryptography",
+        "Topic :: Security"
+]
+dependencies = [
+    "click",
+    "dnspython",
+    "pyroute2",
+    "py25519 @ git+https://www.github.com/ondesmartenot/py25519@20241202",
+    "pysodium",
+    "pymceliece",
+    "pyntruprime",
+    "nftables @ git+https://salsa.debian.org/pkg-netfilter-team/pkg-nftables@52644ab690c2862c9575e3ca0ce58504a62839de#subdirectory=py",
+    "netfilterqueue",
+    "scapy",
+    "SecureString",
+]
+
+[project.scripts]
+pqconnect = "pqconnect.client:main"
+pqconnect-dns-query = "pqconnect.util:dns_query_main"
+pqconnect-server = "pqconnect.server:main"
+pqconnect-keygen = "pqconnect.keygen:main"
+
+[build-system]
+build-backend = "flit_core.buildapi"
+requires = ["flit_core >=3.8.0,<4", "build", "wheel"]
+
+
+[project.optional-dependencies]
+dev = [ "isort", "black", "pyflakes", "pylint", "flake8", "ruff", "tryceratops", "mypy", "pyright", "pyre-check", "coverage", "vulture" ]
+
+
+[tool.black]
+line-length = 79
+
+[tool.mypy]
+# Disallow untyped definitions and calls
+# disallow_untyped_calls = "False"
+disallow_untyped_defs = "True"
+disallow_incomplete_defs = "True"
+check_untyped_defs = "True"
+disallow_untyped_decorators = "True"
+
+# None and optional handling
+no_implicit_optional = "True"
+
+# Configuring warnings
+warn_unused_ignores = "True"
+warn_no_return = "True"
+# warn_return_any = "True"
+warn_redundant_casts = "True"
+
+# Misc things
+strict_equality = "True"
+
+# Config file
+warn_unused_configs = "True"
+
+ignore_missing_imports = "True"
+
+[tool.pyright]
+venvPath="."
+venv="venv"
+include = ["src"]
+exclude = ["**/__pycache__"]
+# ignore = []
+defineConstant = { DEBUG = true }
+stubPath = "out"
+
+reportMissingImports = true
+reportMissingTypeStubs = false
+
+pythonVersion = "3.6"
+pythonPlatform = "Linux"
+
+executionEnvironments = [
+  { root = "src" }
+]

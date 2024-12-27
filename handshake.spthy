@@ -1,0 +1,172 @@
+/*
+Model of PQConnect Handshake
+======================================
+*/
+
+theory PQCHandshake
+begin
+
+builtins: hashing, asymmetric-encryption,
+   symmetric-encryption, diffie-hellman
+functions: aeadenc/4, aeaddec/4, kdf/1
+/*kdf2 and kdf3 represent the 2nd and third*/
+/*key output by the kdf on a given input*/
+functions: kdf2/1, kdf3/1
+equations: aeaddec(k,n,aeadenc(k,n,m,ad),ad) = m
+
+/* PKI */
+rule Register_static_pq_pk:
+    [ Fr(~ssk) ]
+  -->
+    [ !PQ_Ssk($S, ~ssk), !PQ_Spk($S, pk(~ssk)) ]
+
+rule Register_static_npq_pk:
+    [ Fr(~ssk) ]
+  -->
+    [ !NPQ_Ssk($S, ~ssk), !NPQ_Spk($S, 'g'^~ssk) ]
+
+
+rule Register_ephemeral_pq_pk:
+    [ Fr(~esk) ]
+  -->
+    [ !PQ_Esk($S, ~esk), !PQ_Epk($S, pk(~esk)) ]
+
+rule Register_ephemeral_npq_pk:
+    [ Fr(~esk) ]
+  -->
+    [ !NPQ_Esk($S, ~esk), !NPQ_Epk($S, 'g'^~esk) ]
+
+/* These rules model key comprimse */
+rule Reveal_npq_ssk:
+    [ !NPQ_Ssk(A, ssk) ]
+  --[ NpqSskReveal(A) ]->
+    [ Out(ssk) ]
+
+rule Reveal_pq_ssk:
+    [ !PQ_Ssk(A, ssk) ]
+  --[ PqSskReveal(A) ]->
+    [ Out(ssk) ]
+
+rule Reveal_pq_esk:
+    [ !PQ_Esk(A, esk) ]
+  --[ PqEskReveal(A) ]->
+    [ Out(esk) ]
+
+rule Reveal_npq_esk:
+    [ !NPQ_Esk(A, esk) ]
+  --[ NpqEskReveal(A) ]->
+    [ Out(esk) ]
+
+
+/* 0-RTT Handshake */
+rule 0RTT_PQConnectI:
+  let
+    c0 = aenc(~k0, spkRmceliece)
+    CI = ~k0
+    HI = c0
+    c1 = aeadenc(CI,'0','g'^~eskIx25519,HI)
+    HI = h(<HI,c1>)
+    k1 = spkRx25519^~eskIx25519
+    CI = kdf(<CI,k1>)
+    k2 = epkRx25519^~eskIx25519
+    CI = kdf(<CI,k2>)
+    c2 = aenc(~k3, epkRsntrup)
+    c3 = aeadenc(CI,'0',c2,HI)
+    CI = kdf(<CI,~k3>)
+    HI = h(<HI,c3>)
+    tid = kdf(<CI,HI>)
+    TI = kdf2(<CI,HI>)
+    TR = kdf3(<CI,HI>)
+  in
+    [ !PQ_Spk(R,spkRmceliece),
+      !NPQ_Spk(R,spkRx25519),
+      !PQ_Epk(R,epkRsntrup),
+      !NPQ_Epk(R,epkRx25519),
+      Fr(~eskIx25519),
+      Fr(~k0),
+      Fr(~k3)]
+    --[Zero_RTT(tid), InitiatorTunnel(R,tid,TI,TR)]->
+    [ Out(<'1',c0,c1,c3>) ]
+
+rule 0RTT_PQConnectR:
+  let
+    k0 = adec(c0,~sskRmceliece)
+    CR = k0
+    HR = c0
+    epkIx25519 = aeaddec(CR,'0',c1,HR)
+    HR = h(<HR,c1>)
+    k1 = epkIx25519^~sskRx25519
+    CR = kdf(<CR,k1>)
+    k2 = epkIx25519^~eskRx25519
+    CR = kdf(<CR,k2>)
+    c2 = aeaddec(CR,'0',c3,HR)
+    k3 = adec(c2,~eskRsntrup)
+    CR = kdf(<CR,k3>)
+    HR = h(<HR,c3>)
+    tid = kdf(<CR,HR>)
+    TI = kdf2(<CR,HR>)
+    TR = kdf3(<CR,HR>)
+  in
+    [ !PQ_Ssk($R,~sskRmceliece),
+      !NPQ_Ssk($R,~sskRx25519),
+      !PQ_Esk($R,~eskRsntrup),
+      !NPQ_Esk($R,~eskRx25519),
+      In(<'1',c0,c1,c3>)  ]
+    --[Secret(tid), Secret(TR), Secret(TI), ResponderTunnel($R,tid,TR,TI)]->
+    []
+
+/* lemmas */
+
+lemma 0_RTT_executable:
+  /* There exists a trace, such that */
+  exists-trace
+  /* There exists a responder R, tunnelID id, transport keys ti */
+  /* and tr, and times #i and #j*/
+  "
+    Ex R id ti tr #i #j.
+      /* Such that the 0-RTT handshake finished for id at time #i */
+      Zero_RTT(id) @ #i
+      /* The initiator established a tunnel with R at time #i*/
+      & InitiatorTunnel(R,id,ti,tr) @ #i
+      /* and the R established a tunnel with the same */
+      /* tunnelID ad transport keys at time #j*/
+      & ResponderTunnel(R,id,tr,ti) @ #j
+  "
+
+lemma 0_RTT_FS_confidential:
+  /* For all handshakes occuring at time i */
+  "
+    All S id ti tr #i #j #k.
+      (
+        InitiatorTunnel(S,id,ti,tr) @ #i
+      /* if long term key compromise occurs after time i */
+
+        & NpqSskReveal(S) @ #j
+        & (i < j)
+        & PqSskReveal(S) @ #k
+        & (i < k)
+
+      /* and there is never also a compromise of
+      the server's Post-Quantum ephemeral keys */
+
+        & not(Ex #l. PqEskReveal(S) @ #l )
+      )
+      ==>
+      /* then at no time does an adversary learn ti or tr */
+      (
+        not(Ex #r. K(ti) @ #r)
+        &not(Ex #s. K(tr) @ #s)
+      )
+  "
+
+lemma responder_client_auth:
+  /* For all Servers R and S and shared values tid,ti,tr,
+     If a client has created a tunnel with R, and S has
+     created a tunnel with the same values, then S must be R*/
+
+  "
+    All R S id ti tr #i #j.
+      InitiatorTunnel(R,id,ti,tr) @ i
+      & ResponderTunnel(S,id,ti,tr) @ j ==> S = R
+  "
+end

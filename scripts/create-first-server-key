@@ -1,0 +1,22 @@
+#!/bin/sh
+
+umask 077
+
+if [ -d /etc/pqconnect/config ]
+then
+  echo /etc/pqconnect/config already exists, not touching that
+else
+  mkdir -p /etc/pqconnect/config
+  echo 42424 > /etc/pqconnect/config/pqcport
+  echo 42425 > /etc/pqconnect/config/keyport
+fi
+
+if [ -d /etc/pqconnect/keys ]
+then
+  echo /etc/pqconnect/keys already exists, not touching that
+else
+  . run/bin/activate
+  export LD_LIBRARY_PATH=/usr/local/lib
+  mkdir -p /etc/pqconnect/keys
+  pqconnect-keygen -c /etc/pqconnect/config -d /etc/pqconnect/keys
+fi

@@ -1,0 +1,32 @@
+#!/bin/sh
+
+if [ -e /service/pqconnect-server ]
+then
+  : # presumably everything ok already
+else
+  
+  scripts/start-daemontools
+
+  useradd -M -d /etc/pqconnect -s /bin/false pqconnectlog 2>/dev/null
+  
+  mkdir -p services/server/log/main
+  chmod 700 services
+
+  (
+    /bin/echo '#!/bin/sh'
+    /bin/echo 'cd '`pwd`
+    /bin/echo 'scripts/run-server-core'
+    /bin/echo 'sleep 1'
+  ) > services/server/run
+  chmod 755 services/server/run
+  
+  (
+    /bin/echo '#!/bin/sh'
+    /bin/echo 'exec setuidgid pqconnectlog multilog t n10 s1000000 ./main'
+  ) > services/server/log/run
+  chmod 755 services/server/log/run
+  chown pqconnectlog services/server/log/main
+  
+  ln -s `pwd`/services/server /service/pqconnect-server
+  
+fi

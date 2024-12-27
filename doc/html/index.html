@@ -1,0 +1,158 @@
+<html>
+<head>
+<meta http-equiv="content-type" content="text/html; charset=utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style type="text/css">
+html{overflow-y:scroll;background-color:#042424}
+body{font-family:"Noto Sans","Droid Sans","DejaVu Sans","Arial",sans-serif;line-height:1.5}
+tt,code{background-color:#f0f0f0;font-family:"Noto Sans Mono","Droid Sans Mono","DejaVu Sans Mono","Courier New",monospace,sans-serif;font-size:1em;}
+pre{margin-left:3em}
+p,ul,ol,blockquote,pre{font-size:1.0em;line-height:1.6}
+li p{font-size:1.0em}
+blockquote p{font-size:1.0em}
+h1{font-size:1.5em}
+h2{font-size:1.3em}
+h3{font-size:1.0em}
+h1 a{text-decoration:none}
+table{border-collapse:collapse}
+th,td{border:1px solid black}
+table a{text-decoration:none}
+table tr{font-size:1.0em;line-height:1.6em}
+table tr{font-size:1.0em;line-height:1.5}
+tbody tr:nth-child(12n+1){background-color:#f0ffff}
+tbody tr:nth-child(12n+2){background-color:#f0ffff}
+tbody tr:nth-child(12n+3){background-color:#f0ffff}
+tbody tr:nth-child(12n+4){background-color:#f0ffff}
+tbody tr:nth-child(12n+5){background-color:#f0ffff}
+tbody tr:nth-child(12n+6){background-color:#f0ffff}
+tbody tr:nth-child(12n+7){background-color:#fffff0}
+tbody tr:nth-child(12n+8){background-color:#fffff0}
+tbody tr:nth-child(12n+9){background-color:#fffff0}
+tbody tr:nth-child(12n+10){background-color:#fffff0}
+tbody tr:nth-child(12n+11){background-color:#fffff0}
+tbody tr:nth-child(12n+12){background-color:#fffff0}
+.headline{padding:0;font-weight:bold;font-size:1.0em;vertical-align:top;padding-bottom:0.5em;color:#ffffff;background-color:#042424}
+.navt{display:block;box-sizing:border-box;-moz-box-sizing:border-box;-webkit-box-sizing:border-box;margin:0;padding:0;vertical-align:center;font-size:1.0em}
+.here{background-color:#042424}
+.here{color:#ffffff}
+.away{background-color:#042424}
+.away a{text-decoration:none;display:block;color:#ffffff}
+.away a:hover,.away a:active{text-decoration:underline}
+.main{padding:5px}
+.main{background-color:#ffffff}
+.pagetitle{font-size:1.4em;font-weight:bold}
+.logo img{width:100px}
+@media only screen and (min-width:512px) {
+  .fixed{margin:0;padding:0;width:160px;height:100%;position:fixed;overflow:auto}
+  .main{margin-left:170px}
+}
+</style>
+<title>
+PQConnect: Intro</title>
+</head>
+<body>
+<div class=fixed>
+<div class=headline>
+<div class=logo><img src=topleft.png></div>
+PQConnect</div>
+<div class="navt here">Intro
+</div><div class="navt away"><a href=user.html>For users</a>
+</div><div class="navt away"><a href=sysadmin.html>For sysadmins</a>
+</div><div class="navt away"><a href=compat.html>Compatibility</a>
+</div><div class="navt away"><a href=security.html>Security</a>
+</div><div class="navt away"><a href=crypto.html>Cryptography</a>
+</div><div class="navt away"><a href=papers.html>Papers</a>
+</div></div>
+<div class=main>
+<div class=pagetitle>PQConnect: Intro</div>
+<p>PQConnect is a new easy-to-install layer of Internet security.
+PQConnect lets you take action right now on your computer
+to address the threat of quantum attacks,
+without waiting for upgrades in the applications that you are using.</p>
+<p>PQConnect automatically applies post-quantum cryptography
+from end to end between computers running PQConnect.
+PQConnect adds cryptographic protection to unencrypted applications,
+works in concert with existing pre-quantum applications to add post-quantum protection,
+and adds a second application-independent layer of defense
+to any applications that have begun to incorporate application-specific post-quantum protection.</p>
+<p>VPNs similarly apply to unmodified applications,
+and
+<a href="https://mullvad.net/en/blog/stable-quantum-resistant-tunnels-in-the-app">some</a>
+<a href="https://rosenpass.eu/">VPNs</a>
+support post-quantum cryptography.
+However, VPNs protect your traffic only between your computer
+and the VPN proxies that you have configured your computer to contact:
+VPN traffic is not encrypted end-to-end to other servers.
+The
+<a href="crypto.html#bpn">advantage</a> of PQConnect
+is that, once you have installed PQConnect on your computer,
+PQConnect <em>automatically</em> detects servers that support PQConnect,
+and transparently encrypts traffic to those servers.
+If you are a system administrator installing PQConnect on the server side:
+configuring a server name to announce PQConnect support is easy.</p>
+<h2>What to read next</h2>
+<p>The installation instructions for PQConnect are split between two scenarios.</p>
+<p>If you are a system administrator
+(for example, running a web server),
+you should follow the
+<a href="sysadmin.html">installation instructions for sysadmins</a>.
+This covers setting up the PQConnect server software to handle incoming PQConnect connections from clients.</p>
+<p>If you are a normal user
+(for example, using a web browser),
+you should follow the
+<a href="user.html">installation instructions for users</a>.
+This covers setting up the PQConnect client software to handle outgoing PQConnect connections to servers.</p>
+<p>What about the combined scenario
+that your computer is a client <em>and</em> a server
+(for example, your computer is running an SMTP server
+and is also making outgoing SMTP connections)?
+Then you should follow the
+installation instructions for sysadmins.</p>
+<h2><a name="chat">Chat server</a></h2>
+<p>We have very recently set up <a href="https://zulip.pqconnect.net"><span class="url">https://zulip.pqconnect.net</span></a>
+using Zulip, a popular open-source web-based chat system.
+Feel free to join and discuss PQConnect there—you can be one of the first users!
+Just click on "Sign up" and enter your email address.
+Reports of what worked well and what didn't work so well
+are particularly encouraged.</p>
+<h2>Team</h2>
+<p>PQConnect team (alphabetical order):</p>
+<ul>
+<li>
+<p>Daniel J. Bernstein,
+  University of Illinois at Chicago, USA, and Academia Sinica, Taiwan</p>
+</li>
+<li>
+<p>Tanja Lange,
+  Eindhoven University of Technology, The Netherlands, and Academia Sinica, Taiwan</p>
+</li>
+<li>
+<p>Jonathan Levin,
+  Academia Sinica, Taiwan, and Eindhoven University of Technology, The Netherlands</p>
+</li>
+<li>
+<p>Bo-Yin Yang,
+  Academia Sinica, Taiwan</p>
+</li>
+</ul>
+<p>The PQConnect software is from Jonathan Levin.</p>
+<h2>Funding</h2>
+<p>This work was funded in part
+by the U.S. National Science Foundation under grant 2037867;
+the Deutsche Forschungsgemeinschaft (DFG, German Research Foundation)
+under Germany's Excellence Strategy–EXC 2092 CASA–390781972 "Cyber Security in the Age of Large-Scale Adversaries";
+the European Commision through the Horizon Europe program
+under project number 101135475 (TALER);
+the Dutch Ministry of Education, Culture, and
+Science through Gravitation project "Challenges in Cyber Security - 024.006.037";
+the Taiwan's Executive Yuan Data Safety and Talent
+Cultivation Project (AS-KPQ-109-DSTCP);
+and by the Academia Sinica Grand Challenge Projects AS-GCS-113-M07 and AS-GCP-114-M01.
+"Any opinions, findings, and conclusions or recommendations expressed in this material are those
+of the author(s) and do not necessarily reflect the views of the National Science Foundation"
+(or other funding agencies).</p><hr><font size=1><b>Version:</b>
+This is version 2024.12.27 of the "Intro" web page.
+</font>
+</div>
+</body>
+</html>

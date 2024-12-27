@@ -1,0 +1,19 @@
+#!/bin/sh
+
+umask 077
+
+. run/bin/activate
+
+export LD_LIBRARY_PATH=/usr/local/lib
+export KEYPATH=/etc/pqconnect/keys
+
+pqcport=`cat /etc/pqconnect/config/pqcport`
+keyport=`cat /etc/pqconnect/config/keyport`
+
+if [ -f /etc/pqconnect/config/host ]
+then
+  host=`cat /etc/pqconnect/config/host`
+  exec pqconnect-server -H "$host" -p "$pqcport" -k "$keyport" "$@" 2>&1
+else
+  exec pqconnect-server -p "$pqcport" -k "$keyport" "$@" 2>&1
+fi

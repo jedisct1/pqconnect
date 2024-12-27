@@ -1,0 +1,17 @@
+#!/bin/sh
+
+umask 077
+
+scripts/download-build-install-deps
+
+make
+
+[ -d /etc/pqconnect ] || (
+  mkdir /etc/pqconnect
+  useradd -M -d /etc/pqconnect -s /bin/false pqconnect
+)
+
+[ -d run ] || virtualenv run
+. run/bin/activate
+
+pip install .

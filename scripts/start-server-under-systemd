@@ -1,0 +1,16 @@
+#!/bin/sh
+
+sc=server
+service=pqconnect-$sc
+fn=/etc/systemd/system/$service.service
+awk -v sc=$sc -v pwd=`pwd` '{
+  if ($1 == "WorkingDirectory=/root/pqconnect")
+    $0 = "WorkingDirectory="pwd
+  if ($1 == "ExecStart=scripts/run-"sc"-core")
+    $0 = "ExecStart="pwd"/scripts/run-"sc"-core"
+  print
+}' < scripts/$service.service > ${fn}.tmp
+chmod 644 ${fn}.tmp
+mv ${fn}.tmp $fn
+systemctl daemon-reload
+systemctl start $service

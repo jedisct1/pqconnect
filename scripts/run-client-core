@@ -1,0 +1,8 @@
+#!/bin/sh
+
+umask 077
+
+. run/bin/activate
+
+export LD_LIBRARY_PATH=/usr/local/lib
+exec pqconnect "$@" 2>&1

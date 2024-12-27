@@ -1,0 +1,311 @@
+<html>
+<head>
+<meta http-equiv="content-type" content="text/html; charset=utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style type="text/css">
+html{overflow-y:scroll;background-color:#042424}
+body{font-family:"Noto Sans","Droid Sans","DejaVu Sans","Arial",sans-serif;line-height:1.5}
+tt,code{background-color:#f0f0f0;font-family:"Noto Sans Mono","Droid Sans Mono","DejaVu Sans Mono","Courier New",monospace,sans-serif;font-size:1em;}
+pre{margin-left:3em}
+p,ul,ol,blockquote,pre{font-size:1.0em;line-height:1.6}
+li p{font-size:1.0em}
+blockquote p{font-size:1.0em}
+h1{font-size:1.5em}
+h2{font-size:1.3em}
+h3{font-size:1.0em}
+h1 a{text-decoration:none}
+table{border-collapse:collapse}
+th,td{border:1px solid black}
+table a{text-decoration:none}
+table tr{font-size:1.0em;line-height:1.6em}
+table tr{font-size:1.0em;line-height:1.5}
+tbody tr:nth-child(12n+1){background-color:#f0ffff}
+tbody tr:nth-child(12n+2){background-color:#f0ffff}
+tbody tr:nth-child(12n+3){background-color:#f0ffff}
+tbody tr:nth-child(12n+4){background-color:#f0ffff}
+tbody tr:nth-child(12n+5){background-color:#f0ffff}
+tbody tr:nth-child(12n+6){background-color:#f0ffff}
+tbody tr:nth-child(12n+7){background-color:#fffff0}
+tbody tr:nth-child(12n+8){background-color:#fffff0}
+tbody tr:nth-child(12n+9){background-color:#fffff0}
+tbody tr:nth-child(12n+10){background-color:#fffff0}
+tbody tr:nth-child(12n+11){background-color:#fffff0}
+tbody tr:nth-child(12n+12){background-color:#fffff0}
+.headline{padding:0;font-weight:bold;font-size:1.0em;vertical-align:top;padding-bottom:0.5em;color:#ffffff;background-color:#042424}
+.navt{display:block;box-sizing:border-box;-moz-box-sizing:border-box;-webkit-box-sizing:border-box;margin:0;padding:0;vertical-align:center;font-size:1.0em}
+.here{background-color:#042424}
+.here{color:#ffffff}
+.away{background-color:#042424}
+.away a{text-decoration:none;display:block;color:#ffffff}
+.away a:hover,.away a:active{text-decoration:underline}
+.main{padding:5px}
+.main{background-color:#ffffff}
+.pagetitle{font-size:1.4em;font-weight:bold}
+.logo img{width:100px}
+@media only screen and (min-width:512px) {
+  .fixed{margin:0;padding:0;width:160px;height:100%;position:fixed;overflow:auto}
+  .main{margin-left:170px}
+}
+</style>
+<title>
+PQConnect: For sysadmins</title>
+</head>
+<body>
+<div class=fixed>
+<div class=headline>
+<div class=logo><img src=topleft.png></div>
+PQConnect</div>
+<div class="navt away"><a href=index.html>Intro</a>
+</div><div class="navt away"><a href=user.html>For users</a>
+</div><div class="navt here">For sysadmins
+</div><div class="navt away"><a href=compat.html>Compatibility</a>
+</div><div class="navt away"><a href=security.html>Security</a>
+</div><div class="navt away"><a href=crypto.html>Cryptography</a>
+</div><div class="navt away"><a href=papers.html>Papers</a>
+</div></div>
+<div class=main>
+<div class=pagetitle>PQConnect: For sysadmins</div>
+<p>These are instructions for adding PQConnect support to your existing server,
+to protect connections from client machines that have installed PQConnect.
+These instructions also cover PQConnect connections <em>from</em> your server.</p>
+<p>Prerequisites:
+root on a Linux server (Arch, Debian, Gentoo, Raspbian, Ubuntu);
+ability to edit DNS entries for the server name.</p>
+<h2><a name="quick-start">Quick start</a></h2>
+<p>Here is how to download, install, and run the PQConnect server software.
+Start a root shell and run the following commands:</p>
+<pre><code>cd /root
+wget -m https://www.pqconnect.net/pqconnect-latest-version.txt
+version=$(cat www.pqconnect.net/pqconnect-latest-version.txt)
+wget -m https://www.pqconnect.net/pqconnect-$version.tar.gz
+tar -xzf www.pqconnect.net/pqconnect-$version.tar.gz
+cd pqconnect-$version
+scripts/install-pqconnect
+scripts/create-first-server-key
+scripts/start-server-under-systemd
+</code></pre>
+<p>Then edit the DNS entries for your server name,
+following the instructions printed out by <code>create-first-server-key</code>.
+This is what lets PQConnect clients
+detect that your server supports PQConnect.</p>
+<p>To also run the PQConnect client software:</p>
+<pre><code>scripts/start-client-under-systemd
+</code></pre>
+<p>This has to be after <code>install-pqconnect</code> but can be before
+<code>start-server-under-systemd</code>.
+The client and server run as independent
+<code>pqconnect-client</code> and <code>pqconnect-server</code> services.</p>
+<h2><a name="test">Testing</a></h2>
+<p>The following steps build confidence that
+your new PQConnect server installation
+is properly handling PQConnect clients and non-PQConnect clients.
+(If you are also running the PQConnect client software,
+also try the <a href="user.html#quick-test">quick client test</a>
+and the <a href="user.html#detailed-test">detailed client test</a>.)</p>
+<p>After <code>start-server-under-systemd</code>,
+follow the instructions printed out by <code>create-first-server-key</code>,
+but apply those instructions to a new <code>testing-pqconnect</code> server name in DNS
+pointing to the same IP address,
+without touching your normal server name.</p>
+<p>On another machine running the
+<a href="user.html">PQConnect client software</a>:
+Test that <code>dig testing-pqconnect.your.server</code> sees a <code>10.*</code> address
+instead of the server's actual public address.
+Test that <code>ping -c 30 testing-pqconnect.your.server</code> works and sees a <code>10.*</code> address.</p>
+<p>On the server,
+run <code>journalctl -xeu pqconnect-server</code>
+and look for a key exchange
+with a timestamp matching
+when the PQConnect client first accessed the server.
+Optionally,
+run a network sniffer on the server's public network interface
+to see that the client's pings are arriving as UDP packets rather than ICMP packets.</p>
+<p>Test the server's normal services from the client machine
+and, for comparison, from a machine that isn't running PQConnect yet.
+Note that web servers will typically give 404 responses
+for the <code>testing-pqconnect</code> server name
+(because that isn't the server's normal name),
+but you can still see that the web server is responding.
+Many other types of services will work independently of the name.</p>
+<p>Finally,
+move the <code>testing-pqconnect</code> configuration in DNS
+to your normal server name,
+and test again from both client machines.</p>
+<h2><a name="ports">PQConnect ports</a></h2>
+<p>The PQConnect server needs clients to be able to reach it on two UDP ports:
+a crypto-server port (42424 by default)
+and a key-server port (42425 by default).
+You may wish to pick other ports:
+for example, ports below 1024
+for <a href="security.html#port">port security</a>,
+or ports that avoid restrictions set by
+<a href="compat.html#firewall">external firewalls</a>.</p>
+<p>To set, e.g., crypto-server port 624
+and key-server port 584,
+run</p>
+<pre><code>scripts/change-server-cryptoport 624
+scripts/change-server-keyport 584
+</code></pre>
+<p>before running <code>start-server-under-systemd</code>,
+and edit your DNS records to use the <code>pq1</code> name
+printed out by the last script.</p>
+<p>If you are running the PQConnect client software:
+The PQConnect client uses port 42423 by default.
+To set port 33333,
+replace
+<code>pqconnect-client</code>
+with
+<code>pqconnect-client -p 33333</code>
+in <code>scripts/run-client-core</code>.</p>
+<h2><a name="server-in-a-bottle">Server-in-a-bottle mode</a></h2>
+<p>The PQConnect server software supports a "server-in-a-bottle mode"
+aimed at the following common situation:
+You are running multiple virtual machines (VMs) on one physical machine (the host).
+The VMs are managed by a hypervisor that tries to
+<a href="security.html#virtual">isolate</a>
+each VM,
+to protect the other VMs and the host.
+The VMs communicate on a private network inside the host.
+The host uses network-address translation
+(NAT: e.g., <code>SNAT</code> or <code>MASQUERADE</code> with <code>iptables</code>,
+along with <code>1</code> in <code>/proc/sys/net/ipv4/ip_forward</code>)
+to resend outgoing network traffic from the VMs
+to the Internet,
+so that all of the VMs appear as the same IP address publicly.
+Each VM is providing services on some ports on the public IP address:
+e.g., the host is forwarding IMAP to one VM,
+forwarding SMTP to another VM, etc.</p>
+<p>What server-in-a-bottle mode does
+is run a PQConnect server in its own VM
+to protect connections to all of the other VMs
+(and to any services that you are running outside VMs).
+Compared to running PQConnect in each VM,
+server-in-a-bottle mode has the following advantages:
+PQConnect is installed just once on the machine;
+there are only two new ports to configure for the machine,
+instead of two new ports per VM;
+to the extent that the hypervisor isolates VMs,
+the other VMs are protected
+against potential issues in the PQConnect software.</p>
+<p>The steps to set up server-in-a-bottle mode are as follows.</p>
+<p><strong>Create a VM.</strong>
+Create and start a new persistent VM
+(called <code>pqserver</code>, for example)
+running an OS compatible with the PQConnect software
+(for example, Debian),
+following your favorite procedure to create a new VM.
+Give the VM its own address within the internal network.</p>
+<p><strong>Ensure connectivity.</strong>
+Test that this VM can contact another VM
+via the public IP address and port for the other VM.
+(The whole point here is to have PQConnect protecting traffic
+that it will deliver to the other VMs.)
+If this test does not work,
+presumably the port-forwarding configuration
+is only for traffic arriving from the Internet;
+add forwarding rules that also apply to traffic from this VM,
+and try this test again.
+You can do this without configuring anything outside the VM:
+just copy the host's port-forwarding configuration into this VM,
+adjust as necessary (for, e.g., the VM having different network-interface names,
+and for copying any <code>PREROUTING</code> rules to <code>OUTPUT</code> rules),
+and set up a script to copy and adjust any subsequent changes to the port-forwarding configuration.</p>
+<p><strong>Choose ports.</strong>
+Choose two public ports for PQConnect.
+Double-check that you are not using these ports for anything else:
+for example,
+you don't want to accidentally cut off
+your existing SSH server on port 22.
+For concreteness,
+these instructions take crypto-server port 624
+and key-server port 584.</p>
+<p><strong>Forward packets for those ports into the VM.</strong>
+You'll want to be super-careful for this next step:
+this step is working outside the VMs
+(e.g., working on <code>dom0</code> under Xen).
+This step assumes that the host is using <code>iptables</code> for packet management.
+Run the following
+both from the command line now
+and in a boot script to apply after reboot:</p>
+<pre><code>publicip=1.2.3.4
+pqserver=192.168.100.94
+for port in 584 624
+do
+  for chain in PREROUTING OUTPUT
+  do
+    iptables -t nat -A $chain -p udp \
+      -d $publicip --dport $port -j DNAT \
+      --to-destination $pqserver:$port
+  done
+done
+</code></pre>
+<p>Replace <code>1.2.3.4</code> with the host's public IP address,
+and replace <code>192.168.100.94</code> with the VM's address on the host-internal network.</p>
+<p>This <code>iptables</code> command configures DNAT
+so that UDP packets (<code>-p udp</code>)
+destined to these two ports (<code>--dport $port</code>)
+on the public IP address (<code>-d $publicip</code>)
+are resent to the same ports on the VM.</p>
+<p><strong>Run PQConnect in the VM.</strong>
+Inside the VM,
+follow the
+<a href="#quick-start">quick-start installation</a>
+of the PQConnect server software,
+but run</p>
+<pre><code>scripts/change-server-cryptoport 624
+scripts/change-server-keyport 584
+echo 1.2.3.4 &gt; /etc/pqconnect/config/host
+</code></pre>
+<p>right before running <code>start-server-under-systemd</code>.
+As before, replace <code>1.2.3.4</code> with the host's public IP address.</p>
+<p>This sets up the server to run on the specified ports inside the VM
+(you can also use ports different from the public ports if you want,
+as long as you forward the public ports appropriately),
+and to forward decrypted packets to the public IP address.</p>
+<p><strong>Forward decrypted packets out of the VM.</strong>
+Inside the VM,
+install <code>iptables</code> for packet management,
+and run the following
+(with <code>enX0</code> replaced by the VM's name for its network interface),
+both from the command line now
+and in a boot script to apply after reboot:</p>
+<pre><code>sysctl -w net.ipv4.ip_forward=1
+for proto in tcp udp icmp
+do
+  iptables -t nat -A POSTROUTING -p $proto \
+    -s 10.42.0.0/16 -o enX0 -j MASQUERADE \
+    --to-ports 40000-50000
+done
+</code></pre>
+<p>This <code>iptables</code> rule arranges for PQConnect's decrypted packets
+to be delivered to <code>dom0</code>
+in a way that allows PQConnect to see replies to those packets.
+Specifically, the PQConnect server software
+chooses various <code>10.42.*</code> addresses to send decrypted packets to the public IP address;
+this rule will rewrite those packets
+as coming from <code>192.168.100.94</code> (using port numbers to track the original addresses),
+and will undo this rewriting for packets sent in reply.
+The <code>10.42</code> is a default in the PQConnect server software;
+it's used only inside the VM,
+so it isn't an address you have to change for your configuration.</p>
+<p><strong>Test.</strong>
+Now <a href="#test">test PQConnect</a>
+using a new <code>testing-pqconnect</code> server name.
+Then edit DNS to announce PQConnect support
+on whichever names are used for the services provided by this machine.
+If the DNS names for some VMs are managed by other people,
+let those people know that they can enable PQConnect support
+for those names by simply modifying the DNS entries.
+You don't have to upgrade all of the names at once.</p>
+<h2><a name="client-in-a-bottle">Client-in-a-bottle mode</a></h2>
+<p>The PQConnect client software supports a "client-in-a-bottle mode"
+that runs in a VM to protect outgoing connections from the whole machine,
+analogous to the
+<a href="#server-in-a-bottle">server-in-a-bottle mode</a>
+for the server software.
+Documentation coming soon!</p><hr><font size=1><b>Version:</b>
+This is version 2024.12.26 of the "For sysadmins" web page.
+</font>
+</div>
+</body>
+</html>
