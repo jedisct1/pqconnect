@@ -1,3 +1,4 @@
+import os
 from ipaddress import IPv4Network
 from multiprocessing import Pipe
 from select import select
@@ -7,6 +8,7 @@ from threading import Event
 from time import sleep
 from unittest import TestCase
 
+import pytest
 from pqconnect.iface import (
     check_overlapping_address,
     create_tun_interface,

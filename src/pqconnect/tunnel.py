@@ -7,7 +7,7 @@ from typing import Dict, Optional
 
 from SecureString import clearmem
 
-from .common.constants import (
+from pqconnect.common.constants import (
     CHAIN_KEY_NUM_PACKETS,
     COOKIE_PREFIX,
     EPOCH_DURATION_SECONDS,
@@ -18,10 +18,10 @@ from .common.constants import (
     TIDLEN,
     TUNNEL_MSG,
 )
-from .common.crypto import NLEN, TAGLEN, secret_box, secret_unbox
-from .common.crypto import stream_kdf as kdf
-from .cookie.cookie import Cookie
-from .log import logger
+from pqconnect.common.crypto import NLEN, TAGLEN, secret_box, secret_unbox
+from pqconnect.common.crypto import stream_kdf as kdf
+from pqconnect.cookie.cookie import Cookie
+from pqconnect.log import logger
 
 
 class ExpiredRatchetException(Exception):
@@ -35,6 +35,26 @@ class EpochRatchetException(Exception):
     """
 
 
+class EpochChainException(Exception):
+    """Raised whenever an exception is caught within the EpochChain
+    class. Classes holding EpochChain objects should not need to know
+    implementation details of the EpochChain class.
+
+    """
+
+
+class SendChainException(Exception):
+    """Raised whenever an exception is caught within the SendChain class."""
+
+
+class ReceiveChainException(SendChainException):
+    """Raised whenever an exception is caught within the ReceiveChain class."""
+
+
+class TunnelSessionException(Exception):
+    """Raised by TunnelSession class"""
+
+
 class PacketKey:
     """Object containing a key and its index data"""
 
@@ -43,13 +63,16 @@ class PacketKey:
         self._ctr = ctr
         self._key = key
 
-    def get_epoch(self) -> int:
+    @property
+    def epoch(self) -> int:
         return self._epoch
 
-    def get_ctr(self) -> int:
+    @property
+    def ctr(self) -> int:
         return self._ctr
 
-    def get_key(self) -> bytes:
+    @property
+    def key(self) -> bytes:
         return self._key
 
 
@@ -87,10 +110,6 @@ class EpochChain:
 
         # Create packet keys
         self.chain_ratchet()
-
-    def _get_epoch_no(self) -> int:
-        """Return the epoch number"""
-        return self._epoch
 
     def get_expiration_time(self) -> int:
         return self._expire
@@ -142,18 +161,18 @@ class EpochChain:
         if not len(self._packet_keys):
             self.chain_ratchet()
 
+        # If the index is greater than the maximum paket index, ratchet
+        # forward until bound
+        while (
+            index > max(self._packet_keys.keys())
+            and len(self._packet_keys) < MAX_CHAIN_LEN
+        ):
+            self.chain_ratchet()
         try:
-            # If the index is greater than the maximum paket index, ratchet
-            # forward until bound
-            while (
-                index > max(self._packet_keys.keys())
-                and len(self._packet_keys) < MAX_CHAIN_LEN
-            ):
-                self.chain_ratchet()
             key = self._packet_keys[index]
 
         except KeyError as e:
-            raise ValueError from e
+            raise EpochChainException(f"Non-existent key index: {e}")
 
         return PacketKey(self._epoch, index, key)
 
@@ -162,36 +181,34 @@ class EpochChain:
         if not len(self._packet_keys):
             self.chain_ratchet()
 
-        min_ctr = min(self._packet_keys.keys())
-
         try:
-            key = self.get_packet_key(min_ctr)
+            min_ctr = min(self._packet_keys.keys())
+            key = self._packet_keys[min_ctr]
 
-        except ValueError:
-            logger.exception(f"No key with index {min_ctr} exists in ratchet")
+        except (ValueError, KeyError) as e:
+            raise EpochChainException(e)
 
-        return key
+        return PacketKey(self._epoch, min_ctr, key)
 
     def delete_packet_key(self, packet_key: PacketKey) -> None:
         """Zeroes the key and removes it from the ratchet"""
 
-        if packet_key.get_epoch() != self._epoch:
-            # Fail closed: Can't remove it from the chain but can erase the
-            # key object directly
-            clearmem(packet_key.get_key())
-            raise ValueError
+        if packet_key.epoch != self._epoch:
+            # Can't remove it from the chain but can erase the key object
+            # directly
+            clearmem(packet_key.key)
 
         try:
-            ctr = packet_key.get_ctr()
+            ctr = packet_key.ctr
             key = self._packet_keys.pop(ctr)
             clearmem(key)
 
-        except KeyError as e:
-            raise ValueError from e
+        except KeyError:
+            raise EpochChainException
 
         finally:
             # This should be redundant if no exception was raised.
-            clearmem(packet_key.get_key())
+            clearmem(packet_key.key)
 
     def clear(self) -> None:
         """Erases all keys in the epoch"""
@@ -230,14 +247,19 @@ class SendChain:
         chain ratchets forward to a new epoch and recurses.
 
         """
-        if self._chain.expired():
-            self.epoch_ratchet()
-            return self.get_next_key()
+        try:
+            if self._chain.expired():
+                self.epoch_ratchet()
+                return self.get_next_key()
 
-        else:
-            return self._chain.get_next_chain_key()
+            else:
+                return self._chain.get_next_chain_key()
 
-    def get_epoch_no(self) -> int:
+        except EpochChainException as e:
+            raise SendChainException(e)
+
+    @property
+    def epoch(self) -> int:
         """Return the current epoch number"""
         return self._epoch
 
@@ -245,8 +267,10 @@ class SendChain:
         """Securely erase the packet key and remove it from the chain."""
         try:
             self._chain.delete_packet_key(packet_key)
-        except Exception:
-            logger.exception("Could not delete")
+        except EpochChainException:
+            logger.exception(
+                f"Could not delete key {packet_key.epoch} {packet_key.ctr}"
+            )
 
     def clear(self) -> None:
         """Zero out all keys in the chain"""
@@ -281,7 +305,7 @@ class ReceiveChain(SendChain):
 
     def epoch_ratchet(self, now: Optional[int] = None) -> None:
         """Create a new epoch object and add it to the receive chain. If the
-        ratchet has expired it raises an error.
+        ratchet has expired it raises an ExpiredRatchetException.
 
         """
         # Need to protect receive chain with mutex to avoid
@@ -319,7 +343,7 @@ class ReceiveChain(SendChain):
             self._deletion_timers.append(t)
             t.start()
 
-    def get_packet_key(self, epoch: int, ctr: int) -> PacketKey:
+    def get_recv_packet_key(self, epoch: int, ctr: int) -> PacketKey:
         """Get the packet key from epoch `epoch` at index `ctr` in the
         ratchet.
 
@@ -339,8 +363,8 @@ class ReceiveChain(SendChain):
                 key = chain.get_packet_key(ctr)
                 return key
 
-        except KeyError as e:
-            raise ValueError from e
+        except EpochChainException as e:
+            raise ReceiveChainException(e)
 
         finally:
             if self._mut.locked():
@@ -360,10 +384,14 @@ class ReceiveChain(SendChain):
     def delete_packet_key(self, packet_key: PacketKey) -> None:
         """Securely erase the packet key and remove it from the chain"""
         try:
-            epoch = packet_key.get_epoch()
+            epoch = packet_key.epoch
             self._chains[epoch].delete_packet_key(packet_key)
-        except Exception:
-            logger.exception("Could not delete key")
+
+        except KeyError:
+            raise ReceiveChainException("EpochChain does no exist")
+
+        except EpochChainException as e:
+            raise ReceiveChainException(e)
 
     def clear(self) -> None:
         """Zero and delete all remaining receive chains"""
@@ -427,7 +455,7 @@ class TunnelSession:
 
     def get_epoch(self) -> int:
         """Returns the current sending epoch of the session"""
-        return self._send_chain.get_epoch_no()
+        return self._send_chain.epoch
 
     def send_epoch_ratchet(self) -> None:
         """Ratchet the send chain forward one epoch"""
@@ -465,20 +493,13 @@ class TunnelSession:
             return self._send_chain.get_next_key()
 
     def get_recv_key(self, epoch: int, ctr: int) -> PacketKey:
-        """Return the packet key with index (epoch, ctr) if it exists. Raises a
-        ValueError if it does not exist.
-
-        """
+        """Return the packet key with index (epoch, ctr)"""
         try:
-            key = self._recv_chain.get_packet_key(epoch, ctr)
+            key = self._recv_chain.get_recv_packet_key(epoch, ctr)
+            return key
 
-        except (ValueError, EpochRatchetException):
-            logger.exception(
-                "Invalid receive key index requested. "
-                f"Current epoch: {self.get_epoch()}. Request: {epoch}, {ctr}"
-            )
-
-        return key
+        except (EpochRatchetException, ReceiveChainException) as e:
+            raise TunnelSessionException(e)
 
     def tunnel_send(self, packet: bytes, now: Optional[int] = None) -> bytes:
         """Encrypt packet under the next packet key in the send chain"""
@@ -492,9 +513,9 @@ class TunnelSession:
             logger.exception(f"Could not get packet key")
             return b""
 
-        epoch = packet_key.get_epoch()
-        ctr = packet_key.get_ctr()
-        key = packet_key.get_key()
+        epoch = packet_key.epoch
+        ctr = packet_key.ctr
+        key = packet_key.key
         hdr = TUNNEL_MSG + self._tid + pack("!HI", epoch, ctr)
         enc, tag = secret_box(key, b"\x00" * NLEN, packet, hdr)
 
@@ -524,7 +545,7 @@ class TunnelSession:
                 "!HI", encrypted_packet[len(TUNNEL_MSG) + TIDLEN :]
             )
             packet_key = self.get_recv_key(epoch, ctr)
-            key = packet_key.get_key()
+            key = packet_key.key
             msg = secret_unbox(
                 key,
                 b"\x00" * NLEN,
@@ -537,18 +558,29 @@ class TunnelSession:
             if msg[: len(COOKIE_PREFIX)] == COOKIE_PREFIX:
                 self.recv_epoch_ratchet()
 
+            return msg
+
+        except ReceiveChainException as e:  # delete_packet_key
+            logger.error(f"Failed to delete key at index {epoch}, {ctr}: {e}")
+            return b""
+
+        except TunnelSessionException as e:  # get_recv_key
+            logger.error(
+                f"Could not retrieve decryption key ({epoch}, {ctr})."  # " {e}"
+            )
+            return b""
+
         except Exception as e:
-            logger.log(9, f"Tunnel decryption failed: {e}")
+            logger.error(f"Tunnel decryption failed: {e}")
             return b""
 
         finally:
+
             while (
-                self._recv_chain.get_epoch_no()
-                > self._send_chain.get_epoch_no()
+                self._recv_chain.epoch > self._send_chain.epoch
+                and self._recv_chain.get_chain_len() <= MAX_EPOCHS
             ):
                 self.send_epoch_ratchet()
-
-        return msg
 
     def to_cookie(
         self, key: bytes, nonce: bytes, timestamp: Optional[int] = None
@@ -562,7 +594,7 @@ class TunnelSession:
             timestamp = int(monotonic())
 
         with self._mut:
-            epoch = self._send_chain._epoch
+            epoch = self._send_chain.epoch
             send_root = self._send_chain._chain._next_epoch_key
             recv_root = self._recv_chain._chains[epoch]._next_epoch_key
             cookie = Cookie.from_session_values(

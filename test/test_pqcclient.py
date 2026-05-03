@@ -1,7 +1,9 @@
+import os
 from multiprocessing import Event, Pipe
 from time import time
-from unittest import TestCase, main
+from unittest import TestCase, main, skip
 
+import pytest
 from pqconnect.common.constants import KEYPORT, NUM_PREKEYS
 from pqconnect.common.crypto import dh, skem
 from pqconnect.common.util import base32_decode
@@ -47,14 +49,14 @@ class PQCClientTest(TestCase):
         self.cli_tun_conn, self.remote_tun_conn = Pipe()
         self.end_cond = Event()
         self.cli = PQCClient(
-            12345,
+            12346,
             self.cli_tun_conn,
             self.cli_dns_conn,
             self.end_cond,
             dev_name=self.dev_name,
         )
 
-        self.x25519_pk, self.x25519_sk = dh.dh_keypair()
+        self.x25519_pk, self.x25519_sk = dh.keypair()
         self.mceliece_pk, self.mceliece_sk = skem.keypair()
         self.pk_tree = PKTree(self.mceliece_pk, self.x25519_pk)
         self.pkh = self.pk_tree.get_pubkey_hash()
@@ -168,16 +170,17 @@ class PQCClientTest(TestCase):
         self.assertEqual(peer.get_internal_ip(), "10.59.0.2")
 
 
-class PQCClientConnectionHandlerTest(TestCase):
+@skip("Should rewrite to avoid relying on network")
+class PQCClientTestConnectionHandler(TestCase):
     def setUp(self) -> None:
         mceliece_pk, mceliece_sk = skem.keypair()
-        x25519_pk, x25519_sk = dh.dh_keypair()
+        x25519_pk, x25519_sk = dh.keypair()
         self.pktree = PKTree(mceliece_pk, x25519_pk)
         assert self.pktree.is_complete()
         pkh = base32_decode(
-            "u1hy1ujsuk258krx3ku6wd9rp96kfxm64mgct3s3j26udp57dbu1"
+            "htvv9k4wkfcmpx6rufjlt1qrr4mnv0dzygx5mlrjdfsxczbnzun0"
         )
-        cname = "pq1u1hy1ujsuk258krx3ku6wd9rp96kfxm64mgct3s3j26udp57dbu1.pqconnect.net"
+        cname = "pq1htvv9k4wkfcmpx6rufjlt1qrr4mnv0dzygx5mlrjdfsxczbnzun0.pqconnect.net"
         self.peer = Peer("131.155.69.126", "10.10.0.2", pkh=pkh, cname=cname)
         self.dumbcli = DummyClient()
         self.dumbdev = DummyDevice()
@@ -198,15 +201,17 @@ class PQCClientConnectionHandlerTest(TestCase):
         )
         self.assertEqual(self.handler._peer.get_keyport(), 42425)
 
-    def test_get_static_key(self) -> None:
-        logger.setLevel(9)
-        self.handler._resolve_keyserver_address()
-        self.assertTrue(self.handler._request_static_keys_paced())
+    # XXX: This test talks to the network and so it (often but not always) hangs
+    # def test_get_static_key(self) -> None:
+    #    logger.setLevel(9)
+    #    self.handler._resolve_keyserver_address()
+    #    self.assertTrue(self.handler._request_static_keys_paced())
 
-    def test_get_ephemeral_key(self) -> None:
-        logger.setLevel(9)
-        self.handler._resolve_keyserver_address()
-        self.assertTrue(self.handler._request_ephemeral_keys())
+    # XXX: This test talks to the network and so it (often but not always) hangs
+    # def test_get_ephemeral_key(self) -> None:
+    #    logger.setLevel(9)
+    #    self.handler._resolve_keyserver_address()
+    #    self.assertTrue(self.handler._request_ephemeral_keys())
 
     def test_initiate_handshake_0rtt(self) -> None:
         pass

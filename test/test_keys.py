@@ -11,7 +11,7 @@ from pymceliece import mceliece6960119, mceliece8192128
 class TestKeys(TestCase):
     def setUp(self) -> None:
         self.pk, self.sk = skem.keypair()
-        self.point, self.scalar = dh.dh_keypair()
+        self.point, self.scalar = dh.keypair()
         self.tree = PKTree(self.pk, self.point)
 
     def tearDown(self) -> None:
@@ -28,9 +28,7 @@ class TestKeys(TestCase):
             self.assertTrue(False, "exception thrown but shouldn't have")
 
         try:
-            tree = PKTree(
-                "a" * skem.PUBLICKEYBYTES, "b" * dh.lib25519_dh_PUBLICKEYBYTES
-            )
+            tree = PKTree("a" * skem.PUBLICKEYBYTES, "b" * dh.PUBLICKEYBYTES)
             self.assertTrue(False, "Should have thrown exception")
         except TypeError:
             self.assertTrue(True)

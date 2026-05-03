@@ -1,8 +1,10 @@
+import os
 from multiprocessing import Event, Pipe, Process, synchronize
 from multiprocessing.connection import Connection
 from socket import getaddrinfo
 from unittest import TestCase
 
+import pytest
 from pqconnect.common.constants import A_RECORD
 from pqconnect.dnsproxy import DNSProxy
 from pqconnect.nft import NfqueueBuilder
@@ -54,7 +56,7 @@ class DNSProxyTest(TestCase):
             self.proxy_proc.start()
             self.dns_proc.start()
 
-            info = getaddrinfo("www.jlev.in", 12345)
+            info = getaddrinfo("www.pqconnect.net", 12345)
 
             addr = info[0][4][0]
 

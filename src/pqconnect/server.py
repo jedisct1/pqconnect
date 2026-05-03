@@ -1,4 +1,5 @@
 from multiprocessing import Event, Pipe, Process
+from multiprocessing.connection import Connection
 from os import _exit
 from os.path import basename, dirname, join
 from socket import inet_aton
@@ -28,10 +29,10 @@ from pqconnect.pqcserver import PQCServer
 
 
 @run_as_user(PRIVSEP_USER)
-def run_server(
+def run_server_unprivileged(
     pqcs: PQCServer, keyserver: KeyServer, testing: bool = False
 ) -> None:
-    """Runs the main client process as an unprivileged user"""
+    """Does the main unprivileged work inside the server process"""
     # Create a new KeyServer object
     ev = Event()
 
@@ -66,6 +67,40 @@ def run_server(
         logger.exception(e)
         ev.set()
         _exit(1)
+
+
+def run_server(
+    keydir: str,
+    port: int,
+    keyport: int,
+    user_conn: Connection,
+    interface_name: str,
+    host_ip: str,
+) -> None:
+    """Runs the main server process"""
+
+    # Create PQCServer thread
+    mceliece_path = join(keydir, basename(MCELIECE_SK_PATH))
+    mceliece_pk_path = join(keydir, basename(MCELIECE_PK_PATH))
+    x25519_path = join(keydir, basename(X25519_SK_PATH))
+    x25519_pk_path = join(keydir, basename(X25519_PK_PATH))
+    skey_path = join(keydir, basename(SESSION_KEY_PATH))
+
+    pqcs = PQCServer(
+        mceliece_path,
+        x25519_path,
+        skey_path,
+        port,
+        tun_conn=user_conn,
+        dev_name=interface_name,
+        host_ip=host_ip,
+    )
+
+    # Create KeyServer thread
+    keyserver = KeyServer(mceliece_pk_path, x25519_pk_path, keyport)
+
+    # Drop privileges and do the main work
+    run_server_unprivileged(pqcs, keyserver)
 
 
 @click.command()
@@ -178,27 +213,11 @@ def main(
     child_sig = Event()
     # Create subprocesses
     try:
-        # Create PQCServer
-        mceliece_path = join(keydir, basename(MCELIECE_SK_PATH))
-        mceliece_pk_path = join(keydir, basename(MCELIECE_PK_PATH))
-        x25519_path = join(keydir, basename(X25519_SK_PATH))
-        x25519_pk_path = join(keydir, basename(X25519_PK_PATH))
-        skey_path = join(keydir, basename(SESSION_KEY_PATH))
-
-        pqcs = PQCServer(
-            mceliece_path,
-            x25519_path,
-            skey_path,
-            port,
-            tun_conn=user_conn,
-            dev_name=interface_name,
-            host_ip=host_ip,
+        # Create run_server process
+        server_process = Process(
+            target=run_server,
+            args=(keydir, port, keyport, user_conn, interface_name, host_ip),
         )
-
-        # Create KeyServer
-        keyserver = KeyServer(mceliece_pk_path, x25519_pk_path, keyport)
-
-        server_process = Process(target=run_server, args=(pqcs, keyserver))
 
         # Create tun_listen process
         tun_process = Process(
@@ -206,12 +225,6 @@ def main(
             args=(tun_file, root_conn, child_sig),
         )
 
-    except Exception as e:
-        logger.exception(e)
-        bye(2)
-
-    # Run
-    try:
         tun_process.start()
         server_process.start()
 
@@ -224,12 +237,6 @@ def main(
         tun_process.terminate()
         server_process.terminate()
 
-        logger.log(9, "Closing Keyserver")
-        keyserver.close()
-        logger.log(9, "Keyserver closed")
-        logger.log(9, "Closing PQCServer")
-        pqcs.close()
-        logger.log(9, "PQCServer closed")
         bye()
 
 

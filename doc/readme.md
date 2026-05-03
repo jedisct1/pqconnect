@@ -58,6 +58,16 @@ Just click on "Sign up" and enter your email address.
 Reports of what worked well and what didn't work so well
 are particularly encouraged.
 
+**2025.01.12 news:**
+The TU/e network is
+[down](https://www.tue.nl/en/news-and-events/news-overview/12-01-2025-network-tue-is-shut-down-no-education-on-monday)
+because of an attack.
+We have restored <https://www.pqconnect.net>
+but we don't have the chat server back yet, sorry.
+
+**2025.01.30 news:**
+The chat server is back!
+
 ## Team
 
 PQConnect team (alphabetical order):

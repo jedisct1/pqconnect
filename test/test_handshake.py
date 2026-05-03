@@ -25,7 +25,7 @@ class HandshakeTest(TestCase):
     def setUp(self) -> None:
         self.skem = skem
         self.pqpk, self.pqsk = self.skem.keypair()
-        self.npqpk, self.npqsk = dh.dh_keypair()
+        self.npqpk, self.npqsk = dh.keypair()
         self.client = DummyClient()
         self.device = DummyDevice()
         self.server = DummyServer()
@@ -33,7 +33,7 @@ class HandshakeTest(TestCase):
 
     def test_handshake_0rtt(self) -> None:
         e_sntrup_r, e_sntrupsk_r = ekem.keypair()
-        e_x25519_r, e_x25519sk_r = dh.dh_keypair()
+        e_x25519_r, e_x25519sk_r = dh.keypair()
 
         mceliece_ct = skem.enc(self.pqpk)
         i = PQCClientConnectionHandler(

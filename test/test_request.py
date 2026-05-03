@@ -1,6 +1,9 @@
 from unittest import TestCase
 
-from pqconnect.common.constants import EPHEMERAL_KEY_REQUEST
+from pqconnect.common.constants import (
+    EPHEMERAL_KEY_REQUEST,
+    STATIC_KEY_REQUEST,
+)
 from pqconnect.common.crypto import dh, ekem
 from pqconnect.request import (
     EphemeralKeyRequest,
@@ -122,6 +125,16 @@ class TestKeyRequestHandler(TestCase):
             type(handler_request1),
         )
 
+    def test_invalid_request_handled(self) -> None:
+        """Should return None and not raise any exceptions"""
+        fake = b"this is not a real request"
+        more_fake = StaticKeyRequest()
+        more_fake._pack_bts([b"hello", b"I", b"am", b"fake"])
+        print(more_fake.payload)
+
+        self.assertIsNone(KeyRequestHandler(fake).request())
+        self.assertIsNone(KeyRequestHandler(more_fake.payload).request())
+
 
 class TestResponseHandler(TestCase):
     def setUp(self) -> None:
@@ -144,6 +157,6 @@ class TestEphemeralRequestResponse(TestCase):
     def test_same_size(self) -> None:
         req = EphemeralKeyRequest()
         sntrup, _ = ekem.keypair()
-        ecc, _ = dh.dh_keypair()
+        ecc, _ = dh.keypair()
         resp = EphemeralKeyResponse(pqpk=sntrup, npqpk=ecc)
         self.assertEqual(len(bytes(req)), len(bytes(resp)))

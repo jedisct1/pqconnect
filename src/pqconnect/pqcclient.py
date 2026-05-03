@@ -7,8 +7,7 @@ from typing import Dict, List, Optional, Tuple
 
 from dns import resolver
 from dns.rdtypes.ANY.TXT import TXT
-from py25519 import dh, dh_keypair
-from scapy.all import DNSRR, IP, UDP, dnstypes
+from scapy.all import DNSRR, IP, UDP, dnstypes  # type: ignore
 from SecureString import clearmem
 
 from pqconnect.common.constants import (
@@ -17,7 +16,7 @@ from pqconnect.common.constants import (
     NUM_PREKEYS,
     SEG_LEN,
 )
-from pqconnect.common.crypto import NLEN, ekem, h, secret_box, skem
+from pqconnect.common.crypto import NLEN, dh, ekem, h, secret_box, skem
 from pqconnect.common.crypto import stream_kdf as kdf
 from pqconnect.common.util import base32_decode, base32_encode
 from pqconnect.dns_parse import parse_pq1_record
@@ -580,7 +579,7 @@ class PQCClientConnectionHandler(Thread):
         self.handshake_state = c0
 
         # Generate ephemeral ECDH keys
-        self._e_x25519_i, self._e_x25519sk_i = dh_keypair()
+        self._e_x25519_i, self._e_x25519sk_i = dh.keypair()
 
         # box epkIx25519
         c1, tag1 = secret_box(
@@ -593,7 +592,7 @@ class PQCClientConnectionHandler(Thread):
         self.handshake_state = h(self.handshake_state + c1 + tag1)
 
         #### k1
-        k1 = dh(self._s_x25519_r, self._e_x25519sk_i)
+        k1 = dh.dh(self._s_x25519_r, self._e_x25519sk_i)
         (self.cipher_state,) = kdf(
             1,
             self.cipher_state,
@@ -603,7 +602,7 @@ class PQCClientConnectionHandler(Thread):
         clearmem(k1)
 
         #### k2
-        k2 = dh(self._e_x25519_r, self._e_x25519sk_i)
+        k2 = dh.dh(self._e_x25519_r, self._e_x25519sk_i)
         (self.cipher_state,) = kdf(
             1,
             self.cipher_state,

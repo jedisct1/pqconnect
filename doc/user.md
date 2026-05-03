@@ -3,7 +3,8 @@ This automatically protects outgoing connections from your machine
 to servers that support PQConnect.
 
 Prerequisites:
-root on a Linux machine (Arch, Debian, Gentoo, Raspbian, Ubuntu).
+root on a Linux machine (Arch, Debian, Gentoo, Raspbian, Ubuntu);
+`wget` and `sudo` already installed.
 The software does not support other operating systems yet, sorry.
 
 ## <a name="quick-start">Quick start</a>

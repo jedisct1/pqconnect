@@ -1,4 +1,5 @@
 import logging
+import os
 import sys
 from multiprocessing import Pipe
 from multiprocessing.connection import wait
@@ -33,8 +34,8 @@ logging.basicConfig(
 )
 
 EXT_IP = "127.0.0.1"
-INT_IP = "172.16.0.2"
-MY_IP = "172.16.0.1"
+INT_IP = "10.99.0.2"
+MY_IP = "10.99.0.1"
 PREFIX_LEN = 24
 dev_name = "test_pqc0"
 
@@ -120,6 +121,10 @@ class TestTunDevice(TestCase):
 
     def test__make_local_ipv4(self) -> None:
         self.dev._prefix_len = 12
+        # set subnet manually to avoid address conflicts on the system
+        self.dev._subnet4 = sum(
+            a << b for a, b in zip([172, 16, 0, 0], [24, 16, 8, 0])
+        ).to_bytes(4, "big")
         self.assertEqual(self.dev._make_local_ipv4(0), "172.16.0.0")
         self.assertEqual(self.dev._make_local_ipv4(127), "172.16.0.127")
         self.assertEqual(self.dev._make_local_ipv4(256), "172.16.1.0")
@@ -140,6 +145,10 @@ class TestTunDevice(TestCase):
 
         """
 
+        # set subnet manually to avoid address conflicts on the system
+        self.dev._subnet4 = sum(
+            a << b for a, b in zip([172, 16, 0, 0], [24, 16, 8, 0])
+        ).to_bytes(4, "big")
         self.dev._prefix_len = 12
         self.dev._next_ip = 5
         self.assertEqual(self.dev.get_next_ip(), "172.16.0.5")
@@ -334,12 +343,12 @@ class TestTunDevice(TestCase):
         peer.set_tunnel(tunnel_session)
         cookie = self.dev._generate_cookie(peer)
         self.assertNotEqual(cookie, b"")
-        peer.close()
+        # peer.close()
 
     def test_prune_connection(self) -> None:
         """Tests that prune connection removes the least recently used session"""
         tids = [b"0" * 32]
-        peer0 = Peer("1.2.3.4", "2.3.4.5")
+        peer0 = Peer("1.2.3.4", "2.3.4.5", port=PQCPORT)
         ts0 = TunnelSession(tids[0], b"1" * 32, b"2" * 32)
         peer0.set_tunnel(ts0)
 
@@ -446,7 +455,7 @@ class TestTunDevice(TestCase):
 
         my_tun = TunnelSession(tid, sr, rr)
 
-        peer = Peer("1.2.3.4", self.dev.get_next_ip())
+        peer = Peer("1.2.3.4", self.dev.get_next_ip(), port=PQCPORT)
         peer.set_tunnel(my_tun)
         self.assertTrue(self.dev.add_peer(peer))
 
@@ -537,7 +546,7 @@ class TestTunDevice(TestCase):
 
     def test__queue_send_packet(self) -> None:
         """Tests that outgoing session messages are queued correctly"""
-        peer = Peer("1.2.3.4", self.dev.get_next_ip())
+        peer = Peer("1.2.3.4", self.dev.get_next_ip(), port=PQCPORT)
         print(f"internal IP: {peer.get_internal_ip()}")
         tun = TunnelSession(b"a" * 32, b"b" * 32, b"c" * 32)
         peer.set_tunnel(tun)
@@ -545,8 +554,11 @@ class TestTunDevice(TestCase):
 
         sock = socket(AF_INET, SOCK_DGRAM)
         sock.sendto(b"hello", (peer.get_internal_ip(), peer.get_pqcport()))
+        # We have not added anything to the send queue
+        self.assertEqual(self.dev._send_queue.qsize(), 0)
         self.dev._queue_send_packet()
-        print(f"queue size: {self.dev._send_queue.qsize()}")
+        # We have added one packet to the send queue
+        self.assertEqual(self.dev._send_queue.qsize(), 1)
         t = IP(self.dev._send_queue.get())
         while not t.proto == 17:
             conn = wait([self.dev._tun_conn], 1)
@@ -557,6 +569,9 @@ class TestTunDevice(TestCase):
 
         self.assertEqual(bytes(t[UDP].payload), b"hello")
         sock.close()
+        self.dev.remove_peer(peer)
+        tun.close()
+        peer.close()
 
     @patch("socket.socket.sendto", new=sock_send)
     def test__send_from_queue(self) -> None:
@@ -591,6 +606,20 @@ class TestTunDevice(TestCase):
         their_tun.close()
         peer.close()
         self.assertEqual(bytes(IP(pkt)[UDP].payload), b"hello")
+
+    def tearDown(self) -> None:
+        self.event.set()
+        try:
+            self.tun_thread.join()
+        except KeyboardInterrupt:
+            pass
+
+        self.p_conn.close()
+        self.c_conn.close()
+
+        self.dev.close()
+        self.tun_file.close()
+        self.cookie_manager.stop()
 
 
 if __name__ == "__main__":

@@ -5,7 +5,10 @@ Tanja Lange,
 Jonathan Levin,
 and
 Bo-Yin Yang
-will appear at the Network and Distributed System Security (NDSS) Symposium 2025.
+has appeared at the Network and Distributed System Security (NDSS) Symposium 2025.
+The
+[talk slides](https://www.jlev.in/talks/20250226.pdf)
+are also available.
 
 Further reading:
 

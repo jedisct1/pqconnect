@@ -1,6 +1,6 @@
 [project]
 name = "pqconnect"
-version = "1.2.1"
+version = "1.2.3"
 description = "PQConnect Post-Quantum Boring Private Network"
 readme = "README.md"
 requires-python = ">=3.7"
@@ -17,20 +17,20 @@ classifiers = [
 dependencies = [
     "click",
     "dnspython",
+    "lib25519",
+    "nftables @ git+https://salsa.debian.org/pkg-netfilter-team/pkg-nftables@52644ab690c2862c9575e3ca0ce58504a62839de#subdirectory=py",
+    "netfilterqueue",
     "pyroute2",
-    "py25519 @ git+https://www.github.com/ondesmartenot/py25519@20241202",
     "pysodium",
     "pymceliece",
     "pyntruprime",
-    "nftables @ git+https://salsa.debian.org/pkg-netfilter-team/pkg-nftables@52644ab690c2862c9575e3ca0ce58504a62839de#subdirectory=py",
-    "netfilterqueue",
     "scapy",
     "SecureString",
 ]
 
 [project.scripts]
 pqconnect = "pqconnect.client:main"
-pqconnect-dns-query = "pqconnect.util:dns_query_main"
+pqconnect-server-check = "pqconnect.util:main"
 pqconnect-server = "pqconnect.server:main"
 pqconnect-keygen = "pqconnect.keygen:main"
 
@@ -40,7 +40,8 @@ requires = ["flit_core >=3.8.0,<4", "build", "wheel"]
 
 
 [project.optional-dependencies]
-dev = [ "isort", "black", "pyflakes", "pylint", "flake8", "ruff", "tryceratops", "mypy", "pyright", "pyre-check", "coverage", "vulture" ]
+dev = [ "isort", "black", "pyflakes", "pylint", "flake8", "tryceratops", "mypy", "pyright", "coverage", "vulture", "ruff", "pyre-check", "pytest", "pytest-order", "pytest-timeout", "pytest-xdist"]
+dev-ci = [ "mypy", "coverage", "pytest", "pytest-order", "pytest-timeout", "pytest-xdist"]
 
 
 [tool.black]

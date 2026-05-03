@@ -48,7 +48,7 @@ tbody tr:nth-child(12n+12){background-color:#fffff0}
 }
 </style>
 <title>
-PQConnect: Papers</title>
+PQConnect: Changes</title>
 </head>
 <body>
 <div class=fixed>
@@ -61,76 +61,33 @@ PQConnect</div>
 </div><div class="navt away"><a href=compat.html>Compatibility</a>
 </div><div class="navt away"><a href=security.html>Security</a>
 </div><div class="navt away"><a href=crypto.html>Cryptography</a>
-</div><div class="navt away"><a href=changes.html>Changes</a>
-</div><div class="navt here">Papers
+</div><div class="navt here">Changes
+</div><div class="navt away"><a href=papers.html>Papers</a>
 </div></div>
 <div class=main>
-<div class=pagetitle>PQConnect: Papers</div>
-<p>The paper
-<a href="pqconnect-20241206.pdf">"PQConnect: Automated Post-Quantum End-to-End Tunnels"</a>
-by Daniel J. Bernstein,
-Tanja Lange,
-Jonathan Levin,
-and
-Bo-Yin Yang
-has appeared at the Network and Distributed System Security (NDSS) Symposium 2025.
-The
-<a href="https://www.jlev.in/talks/20250226.pdf">talk slides</a>
-are also available.</p>
-<p>Further reading:</p>
-<ul>
-<li>
-<p>Tanja Lange and Jonathan Levin,
-  <a href="20241227.pdf">"PQConnect: Automated Post-Quantum End-to-End Tunnels"</a>,
-  invited talk at
-  International Collaboration on Post-Quantum Cryptography and Cybersecurity: Retrospect and Prospects,
-  2024.</p>
-</li>
-<li>
-<p>Tanja Lange,
-  <a href="https://hyperelliptic.org/tanja/vortraege/20220627-esa-lange.pdf">"How to fit an elephant into a Smart car – PQC for small devices"</a>,
-  invited talk at ESA Workshop on "Secure Communications for Space Missions in the Post-Quantum Era" at European Space Research and Technology Centre (ESTEC),
-  2022.</p>
-</li>
-<li>
-<p>Tanja Lange,
-  <a href="https://hyperelliptic.org/tanja/vortraege/20220427-oaxaca.pdf">"Code-based cryptography for secure communication"</a>,
-  invited talk at Algebraic Methods in Coding Theory and Communication,
-  2022.</p>
-</li>
-<li>
-<p>Daniel J. Bernstein and Tanja Lange,
-  <a href="https://hyperelliptic.org/tanja/vortraege/slides-dan+tanja-20220401-transition-16x9.pdf">"The transition to post-quantum cryptography"</a>,
-  invited talk at International Distinguished Lecture Series at EECS at National Taiwan University,
-  2021.</p>
-</li>
-<li>
-<p>Tanja Lange,
-  <a href="https://hyperelliptic.org/tanja/vortraege/icmc-21.pdf">"Transitioning to post-quantum: How PQC affects protocols and what we can do today?"</a>,
-  invited talk at International Cryptographic Module Conference 2021.</p>
-</li>
-<li>
-<p>Jonathan Levin,
-  <a href="https://research.tue.nl/en/studentTheses/pqconnect">"PQConnect: An Automated Boring Protocol for Quantum-Secure Tunnels"</a>,
-  master's thesis,
-  Eindhoven University of Technology,
-  2021.</p>
-</li>
-<li>
-<p>Daniel J. Bernstein,
-  <a href="https://pqcrypto.eu.org/deliverables/d2.5.pdf">"Internet: Integration"</a>,
-  PQCRYPTO deliverable D2.5,
-  2018.</p>
-</li>
-<li>
-<p>Daniel J. Bernstein,
-  <a href="https://cr.yp.to/talks.html#2016.02.24">"The post-quantum Internet"</a>,
-  invited talk at PQCrypto 2016.</p>
-</li>
-</ul>
-<p>PQConnect builds on work by many further researchers.
-See the NDSS 2025 paper for references.</p><hr><font size=1><b>Version:</b>
-This is version 2025.03.24 of the "Papers" web page.
+<div class=pagetitle>PQConnect: Changes</div>
+<p><strong><a href="pqconnect-1.2.2.tar.gz"><code>pqconnect-1.2.2.tar.gz</code></a></strong></p>
+<p>Add configuration checker (<code>pqconnect-server-check</code>) for sysadmins to
+diagnose configuration issues.</p>
+<p>Fix unhandled connectivity-loss error.</p>
+<p>Fix handling malformed static-key requests; thanks Jan Mojzis.</p>
+<p>Port to Python 3.13,
+by moving thread creation into <code>run_server</code>.</p>
+<p>Python dependencies: use the <code>lib25519</code> wrapper
+rather than the <code>ondesmartenot/py25519</code> wrapper.</p>
+<p>Handle miscellaneous installation issues on Debian and Alpine.</p>
+<p>Many test improvements.</p>
+<p>Small code cleanups.</p>
+<p>Include <code>./package.do</code> for tarball creation.</p>
+<p>Include <code>./autogen.do</code> for package preprocessing
+(currently just rebuilding <code>doc/html</code>).</p>
+<p>Documentation improvements:
+note dependency on <code>wget</code> and <code>sudo</code>;
+use <code>203.0.113.113</code> as example IP address;
+link to NDSS 2025 slides.</p>
+<p><strong><a href="pqconnect-1.2.1.tar.gz"><code>pqconnect-1.2.1.tar.gz</code></a></strong></p>
+<p>First public release.</p><hr><font size=1><b>Version:</b>
+This is version 2025.03.25 of the "Changes" web page.
 </font>
 </div>
 </body>

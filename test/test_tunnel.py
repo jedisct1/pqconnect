@@ -10,6 +10,7 @@ from pqconnect.common.constants import (
 from pqconnect.common.crypto import randombytes
 from pqconnect.tunnel import (
     EpochChain,
+    EpochChainException,
     PacketKey,
     ReceiveChain,
     SendChain,
@@ -32,12 +33,12 @@ class TestEpochChain(TestCase):
         """
         pk: PacketKey = self.epochChain.get_next_chain_key()
         self.epochChain.delete_packet_key(pk)
-        self.assertEqual(pk.get_key(), b"\x00" * 32)
+        self.assertEqual(pk.key, b"\x00" * 32)
 
         try:
             self.epochChain.delete_packet_key(pk)
             self.assertTrue(False, "key was not removed from the chain")
-        except ValueError:
+        except EpochChainException:
             self.assertTrue(True)
 
     def test_chain_ratchet(self) -> None:
@@ -66,13 +67,13 @@ class TestEpochChain(TestCase):
     def test_get_packet_key(self) -> None:
         """Tests that get_packet_key returns the correct key in the chain"""
         key = self.epochChain.get_packet_key(0)
-        self.assertEqual(key.get_ctr(), 0)
+        self.assertEqual(key.ctr, 0)
 
         key = self.epochChain.get_packet_key(1)
-        self.assertEqual(key.get_ctr(), 1)
+        self.assertEqual(key.ctr, 1)
 
         key = self.epochChain.get_packet_key(50)
-        self.assertEqual(key.get_ctr(), 50)
+        self.assertEqual(key.ctr, 50)
 
         try:
             key = self.epochChain.get_packet_key(1000)
@@ -84,14 +85,14 @@ class TestEpochChain(TestCase):
                 ),
             )
 
-        except ValueError:
+        except EpochChainException:
             self.assertTrue(True)
 
     def test_get_next_key(self) -> None:
         """Tests that get_next_chain_key returns keys from the chain in order"""
         for i in range(100):
             key = self.epochChain.get_next_chain_key()
-            self.assertEqual(key.get_ctr(), i)
+            self.assertEqual(key.ctr, i)
             self.epochChain.delete_packet_key(key)
 
     def test_clear_chain(self) -> None:
@@ -103,7 +104,7 @@ class TestEpochChain(TestCase):
         self.assertEqual(self.epochChain._next_chain_key, b"\x00" * 32)
         self.assertEqual(self.epochChain._next_epoch_key, b"\x00" * 32)
         for k in keys:
-            self.assertEqual(k.get_key(), b"\x00" * 32)
+            self.assertEqual(k.key, b"\x00" * 32)
 
 
 class TestSendChain(TestCase):
@@ -116,7 +117,7 @@ class TestSendChain(TestCase):
         - next_epoch_key is erased upon each epoch ratchet
         - epoch_no is correctly instantiated"""
         for i in range(100):
-            self.assertEqual(self.sendChain.get_epoch_no(), i)
+            self.assertEqual(self.sendChain.epoch, i)
             next_epoch_key = self.sendChain._chain.get_next_epoch_key()
             next_chain_key = self.sendChain._chain._next_chain_key
             self.assertNotEqual(next_epoch_key, b"\x00" * 32)
@@ -132,12 +133,12 @@ class TestSendChain(TestCase):
         """
         # artificially turn the clock back 3 epochs
         key = self.sendChain.get_next_key()
-        self.assertEqual(key.get_epoch(), 0)
+        self.assertEqual(key.epoch, 0)
 
         for i in range(1, 6):
             self.sendChain._chain._expire -= EPOCH_DURATION_SECONDS + 1
             key = self.sendChain.get_next_key()
-            self.assertEqual(key.get_epoch(), i)
+            self.assertEqual(key.epoch, i)
 
     def test_correct_expire_after_ratchet(self) -> None:
         """When a new epoch begins the expiration time should be:
@@ -192,30 +193,30 @@ class TestReceiveChain(TestCase):
         - a new epochChain is added to the chain dictionary
         - a new deletion timer thread is added to the timer list"""
         chain_len = self.recv_chain.get_chain_len()
-        epoch_no = self.recv_chain.get_epoch_no()
+        epoch_no = self.recv_chain.epoch
         timers_len = len(self.recv_chain._deletion_timers)
         self.recv_chain.epoch_ratchet()
 
-        self.assertEqual(self.recv_chain.get_epoch_no(), epoch_no + 1)
+        self.assertEqual(self.recv_chain.epoch, epoch_no + 1)
         self.assertEqual(self.recv_chain.get_chain_len(), chain_len + 1)
         self.assertEqual(len(self.recv_chain._deletion_timers), timers_len + 1)
 
     def test_delete_packet_key(self) -> None:
         """Tests that packet keys are correctly deleted"""
-        key = self.recv_chain.get_packet_key(1, 5)
-        self.assertEqual(key.get_epoch(), 1)
-        self.assertEqual(key.get_ctr(), 5)
+        key = self.recv_chain.get_recv_packet_key(1, 5)
+        self.assertEqual(key.epoch, 1)
+        self.assertEqual(key.ctr, 5)
         self.assertEqual(
-            key.get_key(),
+            key.key,
             (
                 b"'D;o\xd8\xd3\x8a\xff\x8e\x1d\xec\x89\xf9q\xc5"
                 b"\xe2\xa7\xfe\x8ex\xe8pq-R\x7fL\xb3\xa8\xed\xa3u"
             ),
         )
         self.recv_chain.delete_packet_key(key)
-        self.assertEqual(key.get_key(), self.root_key)
+        self.assertEqual(key.key, self.root_key)
         try:
-            self.recv_chain.get_packet_key(1, 5)
+            self.recv_chain.get_recv_packet_key(1, 5)
             self.assertTrue(False, "packet key was not removed")
         except Exception:
             self.assertTrue(True)
@@ -247,19 +248,19 @@ class TestTunnelSession(TestCase):
     def test_get_send_key(self) -> None:
         """Tests that get_send_key returns keys and in the correct order"""
         key = self.t1.get_send_key()
-        self.assertEqual(key.get_epoch(), 0)
-        self.assertEqual(key.get_ctr(), 0)
+        self.assertEqual(key.epoch, 0)
+        self.assertEqual(key.ctr, 0)
         self.t1._send_chain.delete_packet_key(key)
 
         key = self.t1.get_send_key()
-        self.assertEqual(key.get_epoch(), 0)
-        self.assertEqual(key.get_ctr(), 1)
+        self.assertEqual(key.epoch, 0)
+        self.assertEqual(key.ctr, 1)
         self.t1._send_chain.delete_packet_key(key)
         self.t1.send_epoch_ratchet()
 
         key = self.t1.get_send_key()
-        self.assertEqual(key.get_epoch(), 1)
-        self.assertEqual(key.get_ctr(), 0)
+        self.assertEqual(key.epoch, 1)
+        self.assertEqual(key.ctr, 0)
         self.t1._send_chain.delete_packet_key(key)
 
     def test_send_receive(self) -> None:
@@ -316,7 +317,7 @@ class TestTunnelSession(TestCase):
 
         """
         tid = self.t1.get_tid()
-        epoch = self.t1._send_chain.get_epoch_no()
+        epoch = self.t1._send_chain.epoch
         ts = int(monotonic())
         send_key = self.t1._send_chain._chain.get_next_epoch_key()
         send_key = bytes([send_key[i] for i in range(len(send_key))])
@@ -373,35 +374,53 @@ class TestState(TestCase):
         msg = b"hello"
         start = int(monotonic())
 
-        # Sanity check that things are set up correctly
-        expire_0 = self.tme._send_chain._chain._expire
-        self.assertEqual(expire_0, start + EPOCH_DURATION_SECONDS)
+        # Sanity check that things are set up correctly.
 
+        # Check the current send chain expires in 30 seconds
+        # Allow up to 1 second difference in case tunnel creation and START
+        # occur after second boundary
+
+        e0_exp_time = self.tme._send_chain._chain._expire
+        self.assertLessEqual(
+            abs(e0_exp_time - (start + EPOCH_DURATION_SECONDS)), 1
+        )
+
+        # Correct epoch number
         self.assertEqual(self.tpeer._send_chain._epoch, 0)
+
+        # Encryption/Decryption works
         self.assertEqual(
             self.tme.tunnel_recv(self.tpeer.tunnel_send(msg)), msg
         )
 
+        # Only 1 receive chain should exist
         self.assertEqual(len(self.tme._recv_chain._chains), 1)
 
-        # sanity check that epoch ratcheting actually does something
-        sleep(1)
+        # Check that epoch ratcheting updates state and expiration time
+        # correctly. Ratcheting on the remote session object here.
+
+        sleep(1)  # just to distinguish new expiration time from previous
         old_expire = self.tpeer._send_chain._chain._expire
         self.tpeer.send_epoch_ratchet()
         new_expire = self.tpeer._send_chain._chain._expire
         self.assertNotEqual(old_expire, new_expire)
         self.assertEqual(self.tpeer._send_chain._chain._epoch, 1)
-        self.assertEqual(
-            self.tpeer._send_chain._chain._expire,
-            start + 1 + EPOCH_DURATION_SECONDS,
+
+        # Check that new expiration timestamp is correct
+        self.assertLessEqual(
+            abs(new_expire - (start + 1 + EPOCH_DURATION_SECONDS)), 1
         )
 
-        # Send/recv msg from different epoch
+        # Receive message from later epoch. Current tme send_chain epoch is
+        # still 0
+
+        self.assertEqual(self.tme._send_chain._epoch, 0)
+
+        # Receive message from tpeer in epoch 1
         ct = self.tpeer.tunnel_send(msg)
         self.assertEqual(self.tme.tunnel_recv(ct), msg)
 
-        # Check that local state is correct
-
+        # Check that tme send epoch is now updated to 1
         self.assertEqual(self.tme._send_chain._epoch, 1)
         self.assertEqual(len(self.tme._recv_chain._chains), 2)
 
@@ -411,4 +430,5 @@ class TestState(TestCase):
             self.tpeer.tunnel_recv(self.tme.tunnel_send(msg)), msg
         )
 
+        # Check that this did not trigger an update on the peer ratchet
         self.assertEqual(self.tpeer._send_chain._epoch, 1)

@@ -1,7 +1,5 @@
 import stat
-from os import environ, getcwd, listdir
 from os import lstat as st
-from os import mkdir, remove, rmdir
 from os.path import basename, join
 from unittest import TestCase, main, mock
 from unittest.mock import Mock
@@ -110,25 +108,19 @@ class TestKeyGen(TestCase):
         write permissions
 
         """
-        path = "test_static_keygen_fail"
-        pqcport = 12345
-        keyport = 54321
-        dns_only = False
-        # new key path, this will prompt the function to ask to mkdir
-        # say no
-        mocked.return_value = "N"
+        with self.cli.isolated_filesystem():
+            path = "test_static_keygen_fail"
+            pqcport = 12345
+            keyport = 54321
+            dns_only = False
+            # new key path, this will prompt the function to ask to mkdir
+            # say no
+            mocked.return_value = "N"
 
-        self.assertFalse(
-            static_keygen(path, pqcport, keyport, dns_only),
-            "should not be able to write keys to disk",
-        )
-
-        # mkdir again so that the tearDown doesn't throw an exception
-        mocked.return_value = "y"
-        self.assertTrue(
-            static_keygen(path, pqcport, keyport, dns_only),
-            "should not be able to write keys to disk",
-        )
+            self.assertFalse(
+                static_keygen(path, pqcport, keyport, dns_only),
+                "should not be able to write keys to disk",
+            )
 
     @mock.patch("builtins.input")
     def test_click(self, mocked: Mock) -> None:

@@ -47,7 +47,7 @@ class TestPeer(TestCase):
             self.assertTrue(True)
 
         mceliece = randombytes(skem.PUBLICKEYBYTES)
-        x25519 = randombytes(dh.lib25519_dh_PUBLICKEYBYTES)
+        x25519 = randombytes(dh.PUBLICKEYBYTES)
 
         # Correct example
         try:

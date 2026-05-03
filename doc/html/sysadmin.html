@@ -61,6 +61,7 @@ PQConnect</div>
 </div><div class="navt away"><a href=compat.html>Compatibility</a>
 </div><div class="navt away"><a href=security.html>Security</a>
 </div><div class="navt away"><a href=crypto.html>Cryptography</a>
+</div><div class="navt away"><a href=changes.html>Changes</a>
 </div><div class="navt away"><a href=papers.html>Papers</a>
 </div></div>
 <div class=main>
@@ -70,6 +71,7 @@ to protect connections from client machines that have installed PQConnect.
 These instructions also cover PQConnect connections <em>from</em> your server.</p>
 <p>Prerequisites:
 root on a Linux server (Arch, Debian, Gentoo, Raspbian, Ubuntu);
+<code>wget</code> and <code>sudo</code> already installed;
 ability to edit DNS entries for the server name.</p>
 <h2><a name="quick-start">Quick start</a></h2>
 <p>Here is how to download, install, and run the PQConnect server software.
@@ -157,6 +159,17 @@ replace
 with
 <code>pqconnect-client -p 33333</code>
 in <code>scripts/run-client-core</code>.</p>
+<h2><a name="check-config">Configuration check</a></h2>
+<p>To quickly check if your server's DNS records are properly configured and discoverable by a client, you can run</p>
+<pre><code>pqconnect-server-check your.domain.tld
+</code></pre>
+<p>which will perform a DNS query for your server and try to ensure that all the required information is available.
+It will report any misconfigurations it encounters to help you diagnose errors.</p>
+<p>By default this utility will also check that the information in DNS matches
+your local configuration.  To avoid the local configuration check (if, e.g.,
+you are checking your server's configuration from a different machine), you can
+pass the <code>-D</code>/<code>--dns-only</code> option to the utility.  An alternate
+configuration directory can be specified with the <code>-c</code>/<code>--config-dir</code> option.</p>
 <h2><a name="server-in-a-bottle">Server-in-a-bottle mode</a></h2>
 <p>The PQConnect server software supports a "server-in-a-bottle mode"
 aimed at the following common situation:
@@ -227,7 +240,7 @@ This step assumes that the host is using <code>iptables</code> for packet manage
 Run the following
 both from the command line now
 and in a boot script to apply after reboot:</p>
-<pre><code>publicip=1.2.3.4
+<pre><code>publicip=203.0.113.113
 pqserver=192.168.100.94
 for port in 584 624
 do
@@ -239,7 +252,7 @@ do
   done
 done
 </code></pre>
-<p>Replace <code>1.2.3.4</code> with the host's public IP address,
+<p>Replace <code>203.0.113.113</code> with the host's public IP address,
 and replace <code>192.168.100.94</code> with the VM's address on the host-internal network.</p>
 <p>This <code>iptables</code> command configures DNAT
 so that UDP packets (<code>-p udp</code>)
@@ -254,10 +267,10 @@ of the PQConnect server software,
 but run</p>
 <pre><code>scripts/change-server-cryptoport 624
 scripts/change-server-keyport 584
-echo 1.2.3.4 &gt; /etc/pqconnect/config/host
+echo 203.0.113.113 &gt; /etc/pqconnect/config/host
 </code></pre>
 <p>right before running <code>start-server-under-systemd</code>.
-As before, replace <code>1.2.3.4</code> with the host's public IP address.</p>
+As before, replace <code>203.0.113.113</code> with the host's public IP address.</p>
 <p>This sets up the server to run on the specified ports inside the VM
 (you can also use ports different from the public ports if you want,
 as long as you forward the public ports appropriately),
@@ -304,7 +317,7 @@ analogous to the
 <a href="#server-in-a-bottle">server-in-a-bottle mode</a>
 for the server software.
 Documentation coming soon!</p><hr><font size=1><b>Version:</b>
-This is version 2024.12.26 of the "For sysadmins" web page.
+This is version 2025.03.22 of the "For sysadmins" web page.
 </font>
 </div>
 </body>

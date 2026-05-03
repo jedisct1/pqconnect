@@ -20,6 +20,14 @@ else
         dist="Debian"
 fi
 
+# Set gcc as $CC if otherwise unset
+: "${CC:=gcc}";
+ARCH=`uname -m`;
+USERSPACE=`getconf LONG_BIT`;
+if [ $ARCH = i386 ] || [ $ARCH = x86_64 ] && [ $USERSPACE = 32 ]; then
+  export ARCH=i386;
+fi
+
 case $dist in
         Ubuntu | Debian)
                 sudo env NEEDRESTART_SUSPEND=1 \
@@ -30,6 +38,7 @@ case $dist in
                      autoconf \
                      python3 \
                      python3-virtualenv \
+                     python3-venv \
                      python3-dev \
                      python3-build \
                      wget \
@@ -38,6 +47,8 @@ case $dist in
                      libnfnetlink-dev \
                      python3-nftables \
                      libssl-dev \
+                     libcap2-bin \
+                     --no-install-recommends \
                      -y
                 sudo env NEEDRESTART_SUSPEND=1 \
                      apt install python3-capstone -y || :
@@ -47,6 +58,34 @@ case $dist in
                      apt install libmceliece-dev -y || :
                 sudo env NEEDRESTART_SUSPEND=1 \
                      apt install libntruprime-dev -y || :
+                ;;
+
+        Alpine)
+                sudo apk add \
+                     alpine-sdk \
+                     autoconf \
+                     cargo \
+                     curl \
+                     clang \
+                     git \
+                     iproute2 \
+                     iputils \
+                     libcap-setcap \
+                     libnetfilter_queue \
+                     libnetfilter_queue-dev \
+                     libnfnetlink \
+                     libnfnetlink-dev \
+                     linux-headers \
+                     libsodium \
+                     musl-dev \
+                     nftables \
+                     openssl-dev \
+                     py3-pip \
+                     py3-virtualenv \
+                     python3 \
+                     python3-dev \
+                     rust \
+                     wget;
                 ;;
 
         Arch)
@@ -80,9 +119,7 @@ case $dist in
                      net-misc/wget \
                      net-misc/curl \
                      dev-libs/openssl \
-                     dev-vcs/git
-
-
+                     dev-vcs/git;
                 ;;
 esac
 
@@ -109,7 +146,7 @@ install_librandombytes()
         tar -xzf randombytes.cr.yp.to/librandombytes-$randombytes_version.tar.gz
 
         cd librandombytes-$randombytes_version \
-                && ./configure --prefix="$DESTDIR" \
+                && ./configure --prefix="$DESTDIR" --host="$ARCH" \
                 && sudo make -j$nproc install
         cd ..
 }
@@ -124,7 +161,7 @@ install_lib25519()
         command -v valgrind && VALGRIND="--valgrind" || VALGRIND="--no-valgrind"
 
         cd lib25519-$lib25519_version \
-                && ./configure --prefix="$DESTDIR" $VALGRIND \
+                && ./configure --prefix="$DESTDIR" --host="$ARCH" $VALGRIND \
                 && sudo make -j$nproc install
         cd ..
 }
@@ -139,7 +176,7 @@ install_libmceliece()
         command -v valgrind && VALGRIND="--valgrind" || VALGRIND="--no-valgrind"
 
         cd libmceliece-$libmceliece_version \
-                && ./configure --prefix="$DESTDIR" $VALGRIND \
+                && ./configure --prefix="$DESTDIR" --host="$ARCH" $VALGRIND \
                 && sudo make -j$nproc install
 
         cd ..
@@ -155,15 +192,18 @@ install_libntruprime()
         command -v valgrind && VALGRIND="--valgrind" || VALGRIND="--no-valgrind"
 
         cd libntruprime-$libntruprime_version \
-                && ./configure --prefix="$DESTDIR" $VALGRIND \
+                && ./configure --prefix="$DESTDIR" --host="$ARCH" $VALGRIND \
                 && sudo make -j$nproc install
         cd ..
 }
 
-gcc -lcpucycles 2>&1 | grep main > /dev/null || install_libcpucycles
-gcc -lrandombytes 2>&1 | grep main > /dev/null || install_librandombytes
-gcc -l25519 2>&1 | grep main > /dev/null || install_lib25519
-gcc -lmceliece 2>&1 | grep main > /dev/null || install_libmceliece
-gcc -lntruprime 2>&1 | grep main > /dev/null || install_libntruprime
+
+$CC -lcpucycles 2>&1 | grep main > /dev/null || install_libcpucycles
+$CC -lrandombytes 2>&1 | grep main > /dev/null || install_librandombytes
+$CC -l25519 2>&1 | grep main > /dev/null || install_lib25519
+$CC -lmceliece 2>&1 | grep main > /dev/null || install_libmceliece
+$CC -lntruprime 2>&1 | grep main > /dev/null || install_libntruprime
+
+sudo ldconfig $DESTDIR/lib;
 
 exit 0

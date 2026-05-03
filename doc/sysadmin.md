@@ -4,6 +4,7 @@ These instructions also cover PQConnect connections _from_ your server.
 
 Prerequisites:
 root on a Linux server (Arch, Debian, Gentoo, Raspbian, Ubuntu);
+`wget` and `sudo` already installed;
 ability to edit DNS entries for the server name.
 
 ## <a name="quick-start">Quick start</a>
@@ -109,6 +110,21 @@ with
 `pqconnect-client -p 33333`
 in `scripts/run-client-core`.
 
+## <a name="check-config">Configuration check</a>
+
+To quickly check if your server's DNS records are properly configured and discoverable by a client, you can run
+
+    pqconnect-server-check your.domain.tld
+
+which will perform a DNS query for your server and try to ensure that all the required information is available.
+It will report any misconfigurations it encounters to help you diagnose errors.
+
+By default this utility will also check that the information in DNS matches
+your local configuration.  To avoid the local configuration check (if, e.g.,
+you are checking your server's configuration from a different machine), you can
+pass the `-D`/`--dns-only` option to the utility.  An alternate
+configuration directory can be specified with the `-c`/`--config-dir` option.
+
 ## <a name="server-in-a-bottle">Server-in-a-bottle mode</a>
 
 The PQConnect server software supports a "server-in-a-bottle mode"
@@ -187,7 +203,7 @@ Run the following
 both from the command line now
 and in a boot script to apply after reboot:
 
-    publicip=1.2.3.4
+    publicip=203.0.113.113
     pqserver=192.168.100.94
     for port in 584 624
     do
@@ -199,7 +215,7 @@ and in a boot script to apply after reboot:
       done
     done
 
-Replace `1.2.3.4` with the host's public IP address,
+Replace `203.0.113.113` with the host's public IP address,
 and replace `192.168.100.94` with the VM's address on the host-internal network.
 
 This `iptables` command configures DNAT
@@ -217,10 +233,10 @@ but run
 
     scripts/change-server-cryptoport 624
     scripts/change-server-keyport 584
-    echo 1.2.3.4 > /etc/pqconnect/config/host
+    echo 203.0.113.113 > /etc/pqconnect/config/host
 
 right before running `start-server-under-systemd`.
-As before, replace `1.2.3.4` with the host's public IP address.
+As before, replace `203.0.113.113` with the host's public IP address.
 
 This sets up the server to run on the specified ports inside the VM
 (you can also use ports different from the public ports if you want,

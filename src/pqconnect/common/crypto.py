@@ -1,6 +1,6 @@
 from hashlib import shake_256
 
-import py25519
+from lib25519 import x25519
 from pymceliece import mceliece6960119
 from pyntruprime import sntrup761
 from pysodium import (
@@ -22,7 +22,7 @@ ekem = sntrup761
 TAGLEN = crypto_aead_chacha20poly1305_ietf_ABYTES
 randombytes = rb
 HLEN = 32
-dh = py25519
+dh = x25519
 
 
 def secret_box(

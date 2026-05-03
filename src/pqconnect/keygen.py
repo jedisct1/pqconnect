@@ -92,9 +92,6 @@ def save_keys(
 ) -> bool:
     """Saves the given keys to disk"""
 
-    pqconnect_uid = getpwnam(PRIVSEP_USER).pw_uid
-    pqconnect_gid = getgrnam(PRIVSEP_USER).gr_gid
-
     files = {
         "mceliece_pk": mceliece_pk,
         "mceliece_sk": mceliece_sk,
@@ -222,7 +219,7 @@ def static_keygen(
 
         # Generate ECC keys
         print("Generating X25519 keypair")
-        x25519_pk, x25519_sk = dh.dh_keypair()
+        x25519_pk, x25519_sk = dh.keypair()
 
         # Generate and save Session key
         print("Generating symmetric session key")

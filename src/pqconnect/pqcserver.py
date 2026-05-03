@@ -304,8 +304,8 @@ class PQCServerHS(Thread):
             idx += 2
             c0 = data[idx : idx + skem.CIPHERTEXTBYTES]
             idx += skem.CIPHERTEXTBYTES
-            c1 = data[idx : idx + dh.lib25519_dh_PUBLICKEYBYTES]
-            idx += dh.lib25519_dh_PUBLICKEYBYTES
+            c1 = data[idx : idx + dh.PUBLICKEYBYTES]
+            idx += dh.PUBLICKEYBYTES
             tag1 = data[idx : idx + TAGLEN]
             idx += TAGLEN
             c3 = data[idx : idx + ekem.clen]

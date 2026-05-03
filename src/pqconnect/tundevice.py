@@ -11,12 +11,12 @@ if TYPE_CHECKING:
 
 import ipaddress
 from signal import SIGUSR1, signal
-from time import monotonic
+from time import monotonic, sleep
 from types import FrameType
 from typing import Optional, Union
 
 from pyroute2 import IPRoute
-from scapy.all import IP, TCP, UDP
+from scapy.all import IP, TCP, UDP  # type: ignore
 
 from pqconnect.common.constants import (
     EPOCH_DURATION_SECONDS,
@@ -356,9 +356,13 @@ class TunDevice:
         dst_ip = peer.get_external_ip()
         dst_port = peer.get_pqcport()
 
-        self._tunnel_sock.sendto(
-            peer.encrypt(cookie.bytes()), (dst_ip, dst_port)
-        )
+        try:
+            self._tunnel_sock.sendto(
+                peer.encrypt(cookie.bytes()), (dst_ip, dst_port)
+            )
+        except OSError:
+            logger.error("Network unreachable")
+            return
 
     def _prune_connection(self) -> None:
         """Send cookie to older connection if we're a server. Remove the
@@ -528,10 +532,20 @@ class TunDevice:
             dst_ip = peer.get_external_ip()
             dst_port = peer.get_pqcport()
 
-            self._tunnel_sock.sendto(
-                peer.encrypt(bytes(p)), (dst_ip, dst_port)
-            )
-            logger.log(9, f"Message sent over tunnel {peer.get_tid().hex()}")
+            try:
+                self._tunnel_sock.sendto(
+                    peer.encrypt(bytes(p)), (dst_ip, dst_port)
+                )
+                logger.log(
+                    9, f"Message sent over tunnel {peer.get_tid().hex()}"
+                )
+            except OSError:
+                logger.error("Network unreachable")
+                # replace pkt to be sent later
+                self._send_queue.put(pkt)
+
+                # wait for network connectivity to restore
+                sleep(1)
 
     def start(self) -> None:
         """Registers TUN device, external UDP socket, and message queues to the

@@ -10,8 +10,11 @@ default: build
 .PHONY: test clean
 
 venv/bin/activate: pyproject.toml
-	python3 -m venv $(VENV)
+	python3 -m venv --copies $(VENV)
 	$(PYTHON) -m pip install .[dev]
+	sudo setcap 'cap_sys_admin=ep cap_net_admin=ep cap_net_raw=ep' venv/bin/python
+	sudo setcap 'cap_sys_admin=ep cap_net_admin=ep cap_net_raw=ep' venv/bin/python3
+	sudo setcap 'cap_sys_admin=ep cap_net_admin=ep cap_net_raw=ep' venv/bin/python3.12
 
 setup: venv/bin/activate
 

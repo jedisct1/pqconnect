@@ -34,7 +34,7 @@ def _get_tree_dimensions(pklen: int, node_length: int) -> list[int]:
         raise ValueError
 
     ret = []
-    tot_bts = pklen + dh.lib25519_dh_PUBLICKEYBYTES  # +32
+    tot_bts = pklen + dh.PUBLICKEYBYTES  # +32
     while tot_bts > HLEN:  # levels below the root
         num_nodes = (tot_bts + node_length - 1) // node_length  # ceil
         ret.append(num_nodes)
@@ -111,7 +111,7 @@ class _PKTree(ABC):
         if len(pqpk) != pklen:
             raise ValueError
 
-        if len(npqpk) != dh.lib25519_dh_PUBLICKEYBYTES:
+        if len(npqpk) != dh.PUBLICKEYBYTES:
             raise ValueError
 
         # Depth 3
@@ -171,9 +171,7 @@ class _PKTree(ABC):
     def get_npqpk(self) -> bytes:
         """Returns the x25519 public key"""
         try:
-            return self.get_node(3, self._struct[3] - 1)[
-                -dh.lib25519_dh_PUBLICKEYBYTES :
-            ]
+            return self.get_node(3, self._struct[3] - 1)[-dh.PUBLICKEYBYTES :]
         except InvalidNodeException:
             return b""
 
@@ -182,7 +180,7 @@ class _PKTree(ABC):
         try:
             return b"".join(
                 [self.get_node(3, i) for i in range(self._struct[3])]
-            )[: -dh.lib25519_dh_PUBLICKEYBYTES]
+            )[: -dh.PUBLICKEYBYTES]
         except InvalidNodeException:
             return b""
 

@@ -13,7 +13,7 @@ from pqconnect.keys import PKTree
 from pqconnect.log import logger
 
 _pk, _ = skem.keypair()
-_ecc, _ = dh.dh_keypair()
+_ecc, _ = dh.keypair()
 _mock_tree = PKTree(_pk, _ecc)
 
 
@@ -306,7 +306,7 @@ class EphemeralKeyRequest(KeyRequest):
     def __init__(self) -> None:
         super().__init__(EPHEMERAL_KEY_REQUEST)
         super()._pack_bts(  # make request correct length
-            [bytes(ekem.pklen), bytes(dh.lib25519_dh_PUBLICKEYBYTES)]
+            [bytes(ekem.pklen), bytes(dh.PUBLICKEYBYTES)]
         )
 
 
@@ -337,7 +337,7 @@ class EphemeralKeyResponse(KeyRequest):
             if len(pqpk) != ekem.pklen:
                 raise ValueError
 
-            if len(npqpk) != dh.lib25519_dh_PUBLICKEYBYTES:
+            if len(npqpk) != dh.PUBLICKEYBYTES:
                 raise ValueError
 
             self._pqpk = pqpk
@@ -355,7 +355,7 @@ class EphemeralKeyResponse(KeyRequest):
         if len(u[0]) != ekem.pklen:
             raise UnpackException
 
-        if len(u[1]) != dh.lib25519_dh_PUBLICKEYBYTES:
+        if len(u[1]) != dh.PUBLICKEYBYTES:
             raise UnpackException
 
         self._pqpk = u[0]
@@ -384,13 +384,18 @@ class KeyRequestHandler:
         r: Optional[KeyRequest] = None
         t = self.payload[: len(STATIC_KEY_REQUEST)]
 
-        if t == STATIC_KEY_REQUEST:
-            r = StaticKeyRequest(payload=self.payload)
+        try:
+            if t == STATIC_KEY_REQUEST:
+                r = StaticKeyRequest(payload=self.payload)
 
-        elif t == EPHEMERAL_KEY_REQUEST:
-            r = EphemeralKeyRequest()
+            elif t == EPHEMERAL_KEY_REQUEST:
+                r = EphemeralKeyRequest()
 
-        return r
+            return r
+
+        except Exception:
+            logger.exception("Invalid request received")
+            return None
 
 
 class KeyResponseHandler:
@@ -414,10 +419,8 @@ class KeyResponseHandler:
             elif t == EPHEMERAL_KEY_RESPONSE:
                 r = EphemeralKeyResponse(payload=self.payload)
 
-            else:
-                raise Exception
+            return r
+
         except Exception:
             logger.exception("Invalid response received")
             return None
-
-        return r

@@ -189,9 +189,8 @@ class Peer:
 
     def decrypt(self, pkt: bytes) -> bytes:
         """Decrypts pkt under the existing tunnel for this peer. Raises an
-        exception if no connection exists. Returns empty byte string and logs
-        an error if decryption fails. If the message is a cookie then the
-        cookie is stored.
+        exception if no connection exists. If the message is a cookie then the
+        cookie is stored and an empty bytes object is returned.
 
         """
 
@@ -202,12 +201,7 @@ class Peer:
             self._state = PeerState.EXPIRED
             return b""
 
-        try:
-            msg = self._tunnel.tunnel_recv(pkt)
-
-        except Exception as e:
-            logger.exception(f"Decryption failed: {e}")
-            return b""
+        msg = self._tunnel.tunnel_recv(pkt)
 
         self._state = PeerState.ALIVE
 
@@ -218,6 +212,7 @@ class Peer:
         if msg[: len(COOKIE_PREFIX)] == COOKIE_PREFIX:
             self._cookie = msg
             return b""
+
         else:
             return msg
 

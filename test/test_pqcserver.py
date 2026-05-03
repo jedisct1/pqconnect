@@ -7,6 +7,7 @@ from typing import Any, Callable, Dict
 from unittest import TestCase
 from unittest.mock import mock_open, patch
 
+import pytest
 from pqconnect.common.constants import (
     EPHEMERAL_KEY_REQUEST,
     INITIATION_MSG,
@@ -14,7 +15,7 @@ from pqconnect.common.constants import (
     X25519_PK_PATH,
 )
 from pqconnect.common.crypto import dh, skem
-from pqconnect.iface import create_tun_interface
+from pqconnect.iface import AddressAlreadyInUseException, create_tun_interface
 from pqconnect.keys import PKTree
 from pqconnect.keyserver import KeyServer
 from pqconnect.keystore import EphemeralPrivateKeystore
@@ -30,13 +31,20 @@ def randombts(n: int) -> bytes:
 
 
 class PQCServerTest(TestCase):
+
+    @pytest.mark.order(1)
     def setUp(self) -> None:
         # PQCServer requires keyfiles during init. Just create a tmp file and
         # assign the keys later to make this more portable
+        logger.setLevel(logging.DEBUG)
 
-        self.tun_file = create_tun_interface(
-            "pqc_test_server", "10.10.0.1", 16
-        )
+        try:
+            self.tun_file = create_tun_interface(
+                "pqc_test_server", "172.16.0.1", 16
+            )
+        except AddressAlreadyInUseException:
+            logger.debug(msg="AddressAlreadyInUseException")
+
         self.tmpfilename: str = "/tmp/tmp-" + randombts(8).hex()
         self.local_conn, self.remote_conn = Pipe()
         with open(self.tmpfilename, "wb") as f:
@@ -45,12 +53,12 @@ class PQCServerTest(TestCase):
             self.tmpfilename,
             self.tmpfilename,
             self.tmpfilename,
-            12345,
+            12347,
             self.local_conn,
             dev_name="pqc_test_server",
         )
         self.mceliece_pk, self.mceliece_sk = skem.keypair()
-        self.x25519_pk, self.x25519_sk = dh.dh_keypair()
+        self.x25519_pk, self.x25519_sk = dh.keypair()
 
         self.pktree = PKTree(self.mceliece_pk, self.x25519_pk)
 
@@ -92,7 +100,7 @@ class PQCServerTest(TestCase):
 
     def test_keyserver(self) -> None:
         logger.setLevel(logging.DEBUG)
-        addr = ("localhost", 42425)
+        addr = ("127.0.0.1", 42425)
         request = EphemeralKeyRequest().payload
         self.out_sock.sendto(request, addr)
         data, _ = self.out_sock.recvfrom(4096)

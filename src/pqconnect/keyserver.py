@@ -124,7 +124,7 @@ class KeyServer(Thread):
                     )
                     response = self.static_key_response(r)
 
-                except ValueError:
+                except Exception:
                     logger.exception(f"Invalid static key request fron {addr}")
                     continue
 

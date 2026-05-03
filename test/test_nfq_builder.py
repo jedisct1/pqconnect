@@ -1,7 +1,9 @@
 import json
+import os
 from random import randint
 from unittest import TestCase
 
+import pytest
 from nftables import Nftables
 from pqconnect.nft import NfqueueBuilder
 

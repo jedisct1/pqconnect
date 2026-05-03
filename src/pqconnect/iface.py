@@ -93,7 +93,7 @@ def check_overlapping_address(
 
     """
     # Take list from parameters
-    if iface_addrs:
+    if len(iface_addrs) > 0:
         addr_list = iface_addrs
 
     # Build list from existing interfaces

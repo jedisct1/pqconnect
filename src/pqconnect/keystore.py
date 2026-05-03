@@ -48,7 +48,7 @@ class EphemeralKey:
         if not isinstance(x25519, bytes):
             raise TypeError
 
-        if len(x25519) != dh.lib25519_dh_PUBLICKEYBYTES:
+        if len(x25519) != dh.PUBLICKEYBYTES:
             raise ValueError("invalid dh key")
 
         self._x25519_pk = x25519
@@ -109,12 +109,12 @@ class EphemeralPrivateKey(EphemeralKey):
         self.sntrup_sk = sntrup_sk
 
         if not (x25519_pk and x25519_sk):
-            x25519_pk, x25519_sk = dh.dh_keypair()
+            x25519_pk, x25519_sk = dh.keypair()
 
         if not isinstance(x25519_sk, bytes):
             raise TypeError
 
-        if len(x25519_sk) != dh.lib25519_dh_SECRETKEYBYTES:
+        if len(x25519_sk) != dh.SECRETKEYBYTES:
             raise ValueError("invalid x25519 key")
 
         self.x25519_sk = x25519_sk
